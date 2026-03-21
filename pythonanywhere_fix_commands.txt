@@ -1,0 +1,35 @@
+# PythonAnywhere Fix Commands
+# أوامر إصلاح PythonAnywhere
+
+# 1. تحديث الريبو
+cd /home/mahmoudsaleh112/aluminium-hub
+git pull origin main
+
+# 2. إعادة بناء البيئة الافتراضية (لتجنب مشاكل numpy)
+deactivate
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. تثبيت المكتبات المطلوبة (بدون pandas)
+pip install -r requirements_minimal.txt
+
+# 4. التحقق من التثبيت
+pip list
+
+# 5. اختبار التطبيق
+python -c "from api import app; print('App imported successfully')"
+
+# 6. إعادة تحميل Web App
+# من PythonAnywhere dashboard: Web tab -> Reload button
+
+# محتوى ملف WSGI الصحيح:
+# ---------------------------------
+# import sys
+# import os
+# project_home = '/home/mahmoudsaleh112/aluminium-hub'
+# if project_home not in sys.path:
+#     sys.path.insert(0, project_home)
+# os.environ['FLASK_ENV'] = 'production'
+# from api import app as application
+# ---------------------------------
