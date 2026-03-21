@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aluminium Hub - لوحة التحكم</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="auth.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .sidebar {
+            background: linear-gradient(180deg, #4f46e5 0%, #7c3aed 100%);
+            min-height: 100vh;
+        }
+        .nav-item {
+            transition: all 0.3s ease;
+        }
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(-5px);
+        }
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-right: 4px solid white;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 20px;
+            transition: transform 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .table-row:hover {
+            background: #f3f4f6;
+        }
+        .qr-preview {
+            width: 100px;
+            height: 100px;
+            border: 2px dashed #4f46e5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px auto;
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="sidebar w-64 text-white p-6">
+            <div class="mb-8">
+                <h1 class="text-2xl font-bold mb-2">
+                    <i class="fas fa-industry ml-2"></i>
+                    Aluminium Hub
+                </h1>
+                <p class="text-sm opacity-90">لوحة التحكم الإدارية</p>
+            </div>
+            
+            <nav class="space-y-2">
+                <div class="nav-item active p-3 rounded-lg cursor-pointer" onclick="showSection('dashboard')">
+                    <i class="fas fa-tachometer-alt ml-3"></i>
+                    لوحة التحكم
+                </div>
+                <div class="nav-item p-3 rounded-lg cursor-pointer" onclick="showSection('profiles')">
+                    <i class="fas fa-shapes ml-3"></i>
+                    إدارة القطاعات
+                </div>
+                <div class="nav-item p-3 rounded-lg cursor-pointer" onclick="showSection('stock')">
+                    <i class="fas fa-boxes ml-3"></i>
+                    المخزون
+                </div>
+                <div class="nav-item p-3 rounded-lg cursor-pointer" onclick="showSection('waste')">
+                    <i class="fas fa-recycle ml-3"></i>
+                    الفضلات
+                </div>
+                <div class="nav-item p-3 rounded-lg cursor-pointer" onclick="showSection('technicians')">
+                    <i class="fas fa-users ml-3"></i>
+                    الصنايعية
+                </div>
+                <div class="nav-item p-3 rounded-lg cursor-pointer" onclick="showSection('reports')">
+                    <i class="fas fa-chart-bar ml-3"></i>
+                    التقارير
+                </div>
+                <div class="nav-item p-3 rounded-lg cursor-pointer" onclick="showSection('settings')">
+                    <i class="fas fa-cog ml-3"></i>
+                    الإعدادات
+                </div>
+            </nav>
+            
+            <div class="absolute bottom-6 left-6 right-6">
+                <div class="text-sm opacity-75">
+                    <i class="fas fa-user ml-2"></i>
+                    مدير النظام
+                </div>
+                <div class="text-xs opacity-50 mt-1">
+                    آخر تسجيل: 12:45 م
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="flex-1 p-8">
+            <!-- Header -->
+            <div class="glass-effect rounded-2xl p-6 mb-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">لوحة التحكم</h2>
+                        <p class="text-gray-600">مرحباً بك في نظام إدارة الألومنيوم</p>
+                    </div>
+                    <div class="flex space-x-4 space-x-reverse">
+                        <button onclick="refreshData()" class="bg-white p-3 rounded-lg shadow hover:shadow-md transition">
+                            <i class="fas fa-sync-alt text-indigo-600"></i>
+                        </button>
+                        <button onclick="showNotifications()" class="bg-white p-3 rounded-lg shadow hover:shadow-md transition relative">
+                            <i class="fas fa-bell text-indigo-600"></i>
+                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dashboard Section -->
+            <div id="dashboard-section">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm opacity-90">إجمالي المخزون</p>
+                                <p class="text-3xl font-bold">1,247</p>
+                                <p class="text-sm opacity-75 mt-1">
+                                    <i class="fas fa-arrow-up ml-1"></i>
+                                    +12% هذا الشهر
+                                </p>
+                            </div>
+                            <i class="fas fa-boxes text-4xl opacity-50"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm opacity-90">الفضلات اليوم</p>
+                                <p class="text-3xl font-bold">23.5</p>
+                                <p class="text-sm opacity-75 mt-1">
+                                    <i class="fas fa-arrow-down ml-1"></i>
+                                    -5% من الأمس
+                                </p>
+                            </div>
+                            <i class="fas fa-recycle text-4xl opacity-50"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm opacity-90">الصنايعية النشطين</p>
+                                <p class="text-3xl font-bold">8</p>
+                                <p class="text-sm opacity-75 mt-1">
+                                    <i class="fas fa-circle ml-1 text-green-400"></i>
+                                    6 على الخط
+                                </p>
+                            </div>
+                            <i class="fas fa-users text-4xl opacity-50"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm opacity-90">عمليات اليوم</p>
+                                <p class="text-3xl font-bold">45</p>
+                                <p class="text-sm opacity-75 mt-1">
+                                    <i class="fas fa-check ml-1"></i>
+                                    42 نجحت
+                                </p>
+                            </div>
+                            <i class="fas fa-cut text-4xl opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4">
+                            <i class="fas fa-chart-line text-indigo-600 ml-2"></i>
+                            إحصائيات القطع الأسبوعية
+                        </h3>
+                        <canvas id="cuttingChart" height="200"></canvas>
+                    </div>
+                    
+                    <div class="card">
+                        <h3 class="text-lg font-bold mb-4">
+                            <i class="fas fa-chart-pie text-indigo-600 ml-2"></i>
+                            توزيع الفضلات حسب النوع
+                        </h3>
+                        <canvas id="wasteChart" height="200"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4">
+                        <i class="fas fa-history text-indigo-600 ml-2"></i>
+                        النشاط الأخير
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center ml-3">
+                                <i class="fas fa-cut text-green-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-bold">عملية قطع ناجحة</p>
+                                <p class="text-sm text-gray-600">أحمد محمد - PROF-0001 (2.5م)</p>
+                            </div>
+                            <span class="text-sm text-gray-500">قبل 5 دقائق</span>
+                        </div>
+                        
+                        <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center ml-3">
+                                <i class="fas fa-qrcode text-blue-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-bold">مسح QR Code</p>
+                                <p class="text-sm text-gray-600">محمد علي - PROF-0002</p>
+                            </div>
+                            <span class="text-sm text-gray-500">قبل 12 دقيقة</span>
+                        </div>
+                        
+                        <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                            <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center ml-3">
+                                <i class="fas fa-recycle text-orange-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-bold">تسجيل فضلة جديدة</p>
+                                <p class="text-sm text-gray-600">محمود أحمد - 3.5م فضلة</p>
+                            </div>
+                            <span class="text-sm text-gray-500">قبل 25 دقيقة</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Other Sections (Hidden by default) -->
+            <div id="profiles-section" class="hidden">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold">
+                            <i class="fas fa-shapes text-indigo-600 ml-2"></i>
+                            إدارة القطاعات
+                        </h3>
+                        <button onclick="addNewProfile()" class="btn-primary text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-plus ml-2"></i>
+                            إضافة قطاع جديد
+                        </button>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <input type="text" placeholder="بحث عن قطاع..." class="w-full p-3 border rounded-lg">
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-right p-3">كود القطاع</th>
+                                    <th class="text-right p-3">الوصف</th>
+                                    <th class="text-right p-3">الوزن/متر</th>
+                                    <th class="text-right p-3">اللون</th>
+                                    <th class="text-right p-3">الحالة</th>
+                                    <th class="text-right p-3">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-row border-b">
+                                    <td class="p-3">PROF-0001</td>
+                                    <td class="p-3">بروفيل ألومنيوم قياسي</td>
+                                    <td class="p-3">2.5 كجم</td>
+                                    <td class="p-3">أبيض</td>
+                                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded">نشط</span></td>
+                                    <td class="p-3">
+                                        <button onclick="editProfile('PROF-0001')" class="text-blue-600 ml-2">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="generateQR('PROF-0001')" class="text-green-600 ml-2">
+                                            <i class="fas fa-qrcode"></i>
+                                        </button>
+                                        <button onclick="deleteProfile('PROF-0001')" class="text-red-600">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="table-row border-b">
+                                    <td class="p-3">PROF-0002</td>
+                                    <td class="p-3">بروفيل ألومنيوم مقوى</td>
+                                    <td class="p-3">3.2 كجم</td>
+                                    <td class="p-3">أسود</td>
+                                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded">نشط</span></td>
+                                    <td class="p-3">
+                                        <button onclick="editProfile('PROF-0002')" class="text-blue-600 ml-2">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="generateQR('PROF-0002')" class="text-green-600 ml-2">
+                                            <i class="fas fa-qrcode"></i>
+                                        </button>
+                                        <button onclick="deleteProfile('PROF-0002')" class="text-red-600">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="stock-section" class="hidden">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold">
+                            <i class="fas fa-boxes text-indigo-600 ml-2"></i>
+                            إدارة المخزون
+                        </h3>
+                        <div class="flex space-x-2 space-x-reverse">
+                            <button onclick="importExcel()" class="bg-green-600 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-file-excel ml-2"></i>
+                                استيراد Excel
+                            </button>
+                            <button onclick="printLabels()" class="bg-blue-600 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-print ml-2"></i>
+                                طباعة الملصقات
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">إجمالي العناصر</p>
+                            <p class="text-2xl font-bold">1,247</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">القيمة الإجمالية</p>
+                            <p class="text-2xl font-bold">125,700 ريال</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">العناصر المنخفضة</p>
+                            <p class="text-2xl font-bold text-orange-600">23</p>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-right p-3">الرقم المسلسل</th>
+                                    <th class="text-right p-3">كود القطاع</th>
+                                    <th class="text-right p-3">الطول</th>
+                                    <th class="text-right p-3">الوزن</th>
+                                    <th class="text-right p-3">الموقع</th>
+                                    <th class="text-right p-3">الحالة</th>
+                                    <th class="text-right p-3">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-row border-b">
+                                    <td class="p-3">PROF-0001-001</td>
+                                    <td class="p-3">PROF-0001</td>
+                                    <td class="p-3">6.0م</td>
+                                    <td class="p-3">15.0 كجم</td>
+                                    <td class="p-3">ZONE-A-RACK1</td>
+                                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded">متاح</span></td>
+                                    <td class="p-3">
+                                        <button onclick="viewItem('PROF-0001-001')" class="text-blue-600 ml-2">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button onclick="editItem('PROF-0001-001')" class="text-green-600 ml-2">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="waste-section" class="hidden">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold">
+                            <i class="fas fa-recycle text-indigo-600 ml-2"></i>
+                            إدارة الفضلات
+                        </h3>
+                        <button onclick="printWasteLabels()" class="bg-orange-600 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-print ml-2"></i>
+                            طباعة ملصقات الفضلات
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-orange-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">إجمالي الفضلات</p>
+                            <p class="text-2xl font-bold">156.8م</p>
+                        </div>
+                        <div class="bg-orange-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">الوزن الإجمالي</p>
+                            <p class="text-2xl font-bold">392 كجم</p>
+                        </div>
+                        <div class="bg-orange-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">القيمة المحتملة</p>
+                            <p class="text-2xl font-bold">15,680 ريال</p>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-right p-3">رقم الفضلة</th>
+                                    <th class="text-right p-3">من القطاع</th>
+                                    <th class="text-right p-3">الطول</th>
+                                    <th class="text-right p-3">الوزن</th>
+                                    <th class="text-right p-3">التاريخ</th>
+                                    <th class="text-right p-3">الحالة</th>
+                                    <th class="text-right p-3">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-row border-b">
+                                    <td class="p-3">WST-0001</td>
+                                    <td class="p-3">PROF-0001</td>
+                                    <td class="p-3">3.5م</td>
+                                    <td class="p-3">8.75 كجم</td>
+                                    <td class="p-3">2026-03-20</td>
+                                    <td class="p-3"><span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">متاح</span></td>
+                                    <td class="p-3">
+                                        <button onclick="reuseWaste('WST-0001')" class="text-green-600 ml-2">
+                                            <i class="fas fa-recycle"></i>
+                                        </button>
+                                        <button onclick="printWasteQR('WST-0001')" class="text-blue-600 ml-2">
+                                            <i class="fas fa-qrcode"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="technicians-section" class="hidden">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold">
+                            <i class="fas fa-users text-indigo-600 ml-2"></i>
+                            إدارة الصنايعية
+                        </h3>
+                        <button onclick="addTechnician()" class="btn-primary text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-plus ml-2"></i>
+                            إضافة صنايعي
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="border rounded-lg p-4">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold ml-3">
+                                    أحمد
+                                </div>
+                                <div>
+                                    <h4 class="font-bold">أحمد محمد</h4>
+                                    <p class="text-sm text-gray-600">صنايعي ألومنيوم</p>
+                                </div>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">الحالة:</span>
+                                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded">نشط</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">عمليات اليوم:</span>
+                                    <span class="font-bold">12</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">الهاتف:</span>
+                                    <span>0501234567</span>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex space-x-2 space-x-reverse">
+                                <button onclick="viewTechnician('أحمد محمد')" class="text-blue-600">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button onclick="editTechnician('أحمد محمد')" class="text-green-600">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteTechnician('أحمد محمد')" class="text-red-600">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="reports-section" class="hidden">
+                <div class="card">
+                    <h3 class="text-xl font-bold mb-6">
+                        <i class="fas fa-chart-bar text-indigo-600 ml-2"></i>
+                        التقارير والإحصائيات
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-bold mb-4">تقارير سريعة</h4>
+                            <div class="space-y-3">
+                                <button onclick="generateReport('daily')" class="w-full text-right p-3 border rounded-lg hover:bg-gray-50">
+                                    <i class="fas fa-calendar-day text-blue-600 ml-2"></i>
+                                    تقرير اليوم
+                                </button>
+                                <button onclick="generateReport('weekly')" class="w-full text-right p-3 border rounded-lg hover:bg-gray-50">
+                                    <i class="fas fa-calendar-week text-green-600 ml-2"></i>
+                                    تقرير الأسبوع
+                                </button>
+                                <button onclick="generateReport('monthly')" class="w-full text-right p-3 border rounded-lg hover:bg-gray-50">
+                                    <i class="fas fa-calendar-alt text-purple-600 ml-2"></i>
+                                    تقرير الشهر
+                                </button>
+                                <button onclick="generateReport('waste')" class="w-full text-right p-3 border rounded-lg hover:bg-gray-50">
+                                    <i class="fas fa-recycle text-orange-600 ml-2"></i>
+                                    تقرير الفضلات
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-bold mb-4">إحصائيات الأداء</h4>
+                            <canvas id="performanceChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="settings-section" class="hidden">
+                <div class="card">
+                    <h3 class="text-xl font-bold mb-6">
+                        <i class="fas fa-cog text-indigo-600 ml-2"></i>
+                        الإعدادات
+                    </h3>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="font-bold mb-3">إعدادات النظام</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">اسم الشركة</label>
+                                    <input type="text" value="Aluminium Hub" class="w-full p-2 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">اللغة الافتراضية</label>
+                                    <select class="w-full p-2 border rounded-lg">
+                                        <option>العربية</option>
+                                        <option>English</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-bold mb-3">إعدادات الطباعة</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">حجم الملصق</label>
+                                    <select class="w-full p-2 border rounded-lg">
+                                        <option>50x30mm</option>
+                                        <option>60x40mm</option>
+                                        <option>70x50mm</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">الطابعة الافتراضية</label>
+                                    <select class="w-full p-2 border rounded-lg">
+                                        <option>HP LaserJet</option>
+                                        <option>Canon Printer</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-bold mb-3">إعدادات النسخ الاحتياطي</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">تكرار النسخ</label>
+                                    <select class="w-full p-2 border rounded-lg">
+                                        <option>يومياً</option>
+                                        <option>أسبوعياً</option>
+                                        <option>شهرياً</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">موقع الحفظ</label>
+                                    <input type="text" value="D:\Backups" class="w-full p-2 border rounded-lg">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button onclick="saveSettings()" class="btn-primary text-white px-6 py-2 rounded-lg">
+                                <i class="fas fa-save ml-2"></i>
+                                حفظ الإعدادات
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Initialize charts
+        let cuttingChart, wasteChart, performanceChart;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            loadDashboardData();
+        });
+        
+        function initializeCharts() {
+            // Cutting Chart
+            const cuttingCtx = document.getElementById('cuttingChart').getContext('2d');
+            cuttingChart = new Chart(cuttingCtx, {
+                type: 'line',
+                data: {
+                    labels: ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+                    datasets: [{
+                        label: 'عمليات القطع',
+                        data: [12, 19, 15, 25, 22, 30, 28],
+                        borderColor: 'rgb(79, 70, 229)',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+            
+            // Waste Chart
+            const wasteCtx = document.getElementById('wasteChart').getContext('2d');
+            wasteChart = new Chart(wasteCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ألومنيوم أبيض', 'ألومنيوم أسود', 'ألومنيوم بني', 'أخرى'],
+                    datasets: [{
+                        data: [45, 25, 20, 10],
+                        backgroundColor: [
+                            'rgb(79, 70, 229)',
+                            'rgb(156, 163, 175)',
+                            'rgb(251, 146, 60)',
+                            'rgb(163, 230, 53)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            
+            // Performance Chart
+            const performanceCtx = document.getElementById('performanceChart');
+            if (performanceCtx) {
+                performanceChart = new Chart(performanceCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['أحمد محمد', 'محمد علي', 'محمود أحمد', 'عبدالله سعيد'],
+                        datasets: [{
+                            label: 'عمليات اليوم',
+                            data: [12, 8, 15, 6],
+                            backgroundColor: 'rgba(79, 70, 229, 0.8)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function showSection(section) {
+            // Hide all sections
+            document.querySelectorAll('[id$="-section"]').forEach(sec => {
+                sec.classList.add('hidden');
+            });
+            
+            // Show selected section
+            const selectedSection = document.getElementById(section + '-section');
+            if (selectedSection) {
+                selectedSection.classList.remove('hidden');
+            }
+            
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.nav-item').classList.add('active');
+        }
+        
+        function loadDashboardData() {
+            // Simulate loading data from server
+            console.log('Loading dashboard data...');
+        }
+        
+        function refreshData() {
+            // Refresh current section data
+            const icon = event.target.closest('button').querySelector('i');
+            icon.classList.add('fa-spin');
+            
+            setTimeout(() => {
+                icon.classList.remove('fa-spin');
+                showNotification('تم تحديث البيانات بنجاح', 'success');
+            }, 1000);
+        }
+        
+        function showNotifications() {
+            alert('الإشعارات:\n1. 3 قطاعات منخفضة المخزون\n2. 5 عمليات قطع جديدة\n3. تحديث النظام متاح');
+        }
+        
+        function addNewProfile() {
+            alert('نموذج إضافة قطاع جديد - سيتم فتح نافذة منبثقة');
+        }
+        
+        function editProfile(code) {
+            alert(`تعديل القطاع: ${code}`);
+        }
+        
+        function generateQR(code) {
+            alert(`توليد QR Code للقطاع: ${code}`);
+        }
+        
+        function deleteProfile(code) {
+            if (confirm(`هل تريد حذف القطاع ${code}؟`)) {
+                alert(`تم حذف القطاع: ${code}`);
+            }
+        }
+        
+        function importExcel() {
+            alert('استيراد بيانات من Excel - سيتم فتح نافذة اختيار الملف');
+        }
+        
+        function printLabels() {
+            alert('طباعة ملصقات QR Codes - سيتم فتح نافذة الطباعة');
+        }
+        
+        function viewItem(serial) {
+            alert(`عرض تفاصيل العنصر: ${serial}`);
+        }
+        
+        function editItem(serial) {
+            alert(`تعديل العنصر: ${serial}`);
+        }
+        
+        function printWasteLabels() {
+            alert('طباعة ملصقات الفضلات - سيتم فتح نافذة الطباعة');
+        }
+        
+        function reuseWaste(wasteId) {
+            alert(`إعادة استخدام الفضلة: ${wasteId}`);
+        }
+        
+        function printWasteQR(wasteId) {
+            alert(`طباعة QR Code للفضلة: ${wasteId}`);
+        }
+        
+        function addTechnician() {
+            alert('نموذج إضافة صنايعي جديد');
+        }
+        
+        function viewTechnician(name) {
+            alert(`عرض بيانات الصنايعي: ${name}`);
+        }
+        
+        function editTechnician(name) {
+            alert(`تعديل بيانات الصنايعي: ${name}`);
+        }
+        
+        function deleteTechnician(name) {
+            if (confirm(`هل تريد حذف الصنايعي ${name}؟`)) {
+                alert(`تم حذف الصنايعي: ${name}`);
+            }
+        }
+        
+        function generateReport(type) {
+            alert(`توليد تقرير: ${type}`);
+        }
+        
+        function saveSettings() {
+            alert('تم حفظ الإعدادات بنجاح');
+        }
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 left-4 p-4 rounded-lg text-white z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            }`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+    
+    <script>
+        // Check authentication on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!requireAuth()) {
+                return;
+            }
+            
+            // Check if user has admin permissions
+            if (!auth.isAdmin() && auth.getCurrentUser().role !== 'supervisor') {
+                alert('ليس لديك صلاحية للوصول إلى لوحة التحكم');
+                window.location.href = 'mobile_technician_app.html';
+                return;
+            }
+            
+            // Initialize user interface
+            initializeUserInterface();
+            
+            // Rest of your existing initialization code
+            updateDashboard();
+            initializeCharts();
+            loadRecentActivity();
+        });
+    </script>
+</body>
+</html>

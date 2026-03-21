@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aluminium Hub - تطبيق الصنايعي</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="auth.js"></script>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Aluminium Hub">
+    <meta name="application-name" content="Aluminium Hub">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏭</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏭</text></svg>">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        .scanner-frame {
+            border: 3px solid #4f46e5;
+            border-radius: 12px;
+            padding: 20px;
+            background: white;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .success-animation {
+            animation: successPulse 0.5s ease;
+        }
+        @keyframes successPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            padding: 8px 0;
+            z-index: 100;
+        }
+        .nav-item {
+            text-align: center;
+            padding: 8px;
+            color: #6b7280;
+            transition: color 0.2s;
+        }
+        .nav-item.active {
+            color: #4f46e5;
+        }
+        .nav-item:hover {
+            color: #4f46e5;
+        }
+        .qr-scanner {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 16px 0;
+        }
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #4f46e5;
+            animation: scan 2s linear infinite;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        .role-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #4f46e5;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .admin-only {
+            display: none;
+        }
+        body.admin-mode .admin-only {
+            display: block;
+        }
+        .cutting-animation {
+            position: relative;
+            overflow: hidden;
+        }
+        .cutting-animation::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #ef4444;
+            animation: cut 0.5s ease-out;
+        }
+        @keyframes cut {
+            0% { transform: scaleX(0); }
+            100% { transform: scaleX(1); }
+        }
+        .waste-indicator {
+            background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Role Badge -->
+    <div id="role-badge" class="role-badge">صنايعي</div>
+
+    <div class="container mx-auto max-w-md p-4">
+        <!-- Header -->
+        <div class="glass-effect rounded-2xl p-6 mb-6 text-center">
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-industry text-indigo-600 ml-2"></i>
+                Aluminium Hub
+            </h1>
+            <p class="text-gray-600">تطبيق الورشة</p>
+            <div class="mt-2 text-sm text-gray-500">
+                <span id="current-time"></span>
+            </div>
+        </div>
+
+        <!-- User Profile with Role Toggle -->
+        <div class="glass-effect rounded-2xl p-4 mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold ml-3">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800" id="user-name">أحمد محمد</h3>
+                        <p class="text-sm text-gray-600" id="user-role">صنايعي</p>
+                    </div>
+                </div>
+                <button onclick="toggleRole()" class="admin-only bg-purple-600 text-white px-3 py-1 rounded-lg text-sm">
+                    <i class="fas fa-exchange-alt ml-1"></i>
+                    تبديل
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content">
+            <!-- Scanner Section -->
+            <div class="glass-effect rounded-2xl p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4 text-center">
+                    <i class="fas fa-qrcode text-indigo-600 ml-2"></i>
+                    مسح QR Code
+                </h2>
+                
+                <div class="scanner-container">
+                    <div class="scanner-frame">
+                        <div id="scanner-view" class="text-center">
+                            <div class="qr-scanner">
+                                <i class="fas fa-camera text-4xl text-gray-400"></i>
+                                <div class="scan-line"></div>
+                            </div>
+                            <button onclick="startScanning()" class="btn-primary text-white px-6 py-3 rounded-lg w-full font-bold mt-4">
+                                <i class="fas fa-camera ml-2"></i>
+                                ابدأ المسح
+                            </button>
+                        </div>
+                        
+                        <div id="scanning-view" class="text-center hidden">
+                            <div class="qr-scanner">
+                                <div class="scan-line"></div>
+                                <i class="fas fa-qrcode text-4xl text-indigo-600"></i>
+                            </div>
+                            <div class="loading-spinner"></div>
+                            <p class="text-gray-600 mt-2">جاري المسح...</p>
+                            <button onclick="stopScanning()" class="mt-4 text-red-600">
+                                <i class="fas fa-stop ml-1"></i>
+                                إيقاف المسح
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="glass-effect rounded-2xl p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4">
+                    <i class="fas fa-bolt text-indigo-600 ml-2"></i>
+                    إجراءات سريعة
+                </h2>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="quickScan()" class="bg-blue-500 text-white p-4 rounded-lg text-center hover:bg-blue-600 transition">
+                        <i class="fas fa-qrcode text-2xl mb-2"></i>
+                        <p class="text-sm font-bold">مسح سريع</p>
+                    </button>
+                    <button onclick="quickCut()" class="bg-orange-500 text-white p-4 rounded-lg text-center hover:bg-orange-600 transition">
+                        <i class="fas fa-cut text-2xl mb-2"></i>
+                        <p class="text-sm font-bold">قطع سريع</p>
+                    </button>
+                    <button onclick="addWaste()" class="bg-green-500 text-white p-4 rounded-lg text-center hover:bg-green-600 transition">
+                        <i class="fas fa-recycle text-2xl mb-2"></i>
+                        <p class="text-sm font-bold">إضافة فضلة</p>
+                    </button>
+                    <button onclick="viewStock()" class="bg-purple-500 text-white p-4 rounded-lg text-center hover:bg-purple-600 transition">
+                        <i class="fas fa-boxes text-2xl mb-2"></i>
+                        <p class="text-sm font-bold">المخزون</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="glass-effect rounded-2xl p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4">
+                    <i class="fas fa-chart-bar text-indigo-600 ml-2"></i>
+                    إحصائيات اليوم
+                </h2>
+                
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="stats-card text-center">
+                        <i class="fas fa-qrcode text-blue-500 text-2xl mb-2"></i>
+                        <p class="text-2xl font-bold text-gray-800" id="scan-count">0</p>
+                        <p class="text-xs text-gray-600">مسح</p>
+                    </div>
+                    <div class="stats-card text-center">
+                        <i class="fas fa-cut text-orange-500 text-2xl mb-2"></i>
+                        <p class="text-2xl font-bold text-gray-800" id="cut-count">0</p>
+                        <p class="text-xs text-gray-600">قطع</p>
+                    </div>
+                    <div class="stats-card text-center">
+                        <i class="fas fa-recycle text-green-500 text-2xl mb-2"></i>
+                        <p class="text-2xl font-bold text-gray-800" id="waste-count">0</p>
+                        <p class="text-xs text-gray-600">فضلة</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="glass-effect rounded-2xl p-6 mb-20">
+                <h2 class="text-xl font-bold mb-4">
+                    <i class="fas fa-history text-indigo-600 ml-2"></i>
+                    النشاط الأخير
+                </h2>
+                
+                <div id="recent-activity" class="space-y-3">
+                    <!-- Activity items will be added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="grid grid-cols-4">
+            <div class="nav-item active" onclick="showSection('scanner')">
+                <i class="fas fa-qrcode text-xl"></i>
+                <p class="text-xs mt-1">مسح</p>
+            </div>
+            <div class="nav-item" onclick="showSection('stock')">
+                <i class="fas fa-boxes text-xl"></i>
+                <p class="text-xs mt-1">المخزون</p>
+            </div>
+            <div class="nav-item" onclick="showSection('waste')">
+                <i class="fas fa-recycle text-xl"></i>
+                <p class="text-xs mt-1">فضلات</p>
+            </div>
+            <div class="nav-item admin-only" onclick="showSection('admin')">
+                <i class="fas fa-cog text-xl"></i>
+                <p class="text-xs mt-1">إدارة</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let isScanning = false;
+        let currentUser = 'technician'; // 'technician' or 'admin'
+        let serverUrl = 'http://localhost:5000';
+        let isOnline = false;
+        let localData = {
+            scans: [],
+            cuts: [],
+            waste: [],
+            stock: [],
+            settings: {
+                userName: 'أحمد محمد',
+                userRole: 'صنايعي',
+                weightPerMeter: 2.5
+            }
+        };
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            updateTime();
+            setInterval(updateTime, 1000);
+            checkConnection();
+            setInterval(checkConnection, 5000);
+            loadLocalData();
+            updateStats();
+            updateRecentActivity();
+        });
+
+        function initializeApp() {
+            // Check if running as standalone app
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                console.log('Running as standalone app');
+            }
+            
+            // Load saved data
+            loadLocalData();
+            
+            // Check URL for role parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const role = urlParams.get('role');
+            if (role === 'admin') {
+                currentUser = 'admin';
+                document.body.classList.add('admin-mode');
+                updateUserDisplay();
+            }
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ar-EG', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const dateString = now.toLocaleDateString('ar-EG', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            document.getElementById('current-time').textContent = `${dateString} - ${timeString}`;
+        }
+
+        function checkConnection() {
+            if (navigator.onLine) {
+                // Try to connect to server
+                fetch(serverUrl + '/api/health', { 
+                    method: 'GET',
+                    timeout: 3000
+                })
+                .then(response => {
+                    isOnline = true;
+                })
+                .catch(error => {
+                    isOnline = false;
+                });
+            } else {
+                isOnline = false;
+            }
+        }
+
+        function loadLocalData() {
+            const saved = localStorage.getItem('aluminium_hub_tech_data');
+            if (saved) {
+                localData = JSON.parse(saved);
+            }
+        }
+
+        function saveLocalData() {
+            localStorage.setItem('aluminium_hub_tech_data', JSON.stringify(localData));
+        }
+
+        function toggleRole() {
+            if (currentUser === 'technician') {
+                currentUser = 'admin';
+                document.body.classList.add('admin-mode');
+            } else {
+                currentUser = 'technician';
+                document.body.classList.remove('admin-mode');
+            }
+            updateUserDisplay();
+        }
+
+        function updateUserDisplay() {
+            const userName = document.getElementById('user-name');
+            const userRole = document.getElementById('user-role');
+            const roleBadge = document.getElementById('role-badge');
+            
+            if (currentUser === 'admin') {
+                userName.textContent = 'مدير النظام';
+                userRole.textContent = 'مدير';
+                roleBadge.textContent = 'مدير';
+                roleBadge.style.background = '#dc2626';
+            } else {
+                userName.textContent = localData.settings.userName;
+                userRole.textContent = localData.settings.userRole;
+                roleBadge.textContent = 'صنايعي';
+                roleBadge.style.background = '#4f46e5';
+            }
+        }
+
+        function startScanning() {
+            isScanning = true;
+            document.getElementById('scanner-view').classList.add('hidden');
+            document.getElementById('scanning-view').classList.remove('hidden');
+            
+            // Simulate scanning
+            setTimeout(() => {
+                simulateScanResult();
+            }, 2000);
+        }
+
+        function stopScanning() {
+            isScanning = false;
+            document.getElementById('scanner-view').classList.remove('hidden');
+            document.getElementById('scanning-view').classList.add('hidden');
+        }
+
+        function simulateScanResult() {
+            stopScanning();
+            
+            // Generate random scan result
+            const profiles = ['PROF-0001', 'PROF-0002', 'PROF-0003', 'PROF-0004'];
+            const colors = ['أبيض', 'أسود', 'بني', 'رمادي'];
+            const randomProfile = profiles[Math.floor(Math.random() * profiles.length)];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const randomLength = (Math.random() * 5 + 1).toFixed(1);
+            const randomWeight = (randomLength * localData.settings.weightPerMeter).toFixed(2);
+            
+            const result = {
+                serial_number: `${randomProfile}-${Date.now()}`,
+                profile_code: randomProfile,
+                color: randomColor,
+                length: parseFloat(randomLength),
+                weight: parseFloat(randomWeight),
+                location: `ZONE-A-RACK${Math.floor(Math.random() * 10) + 1}`
+            };
+            
+            // Save to local data
+            localData.scans.unshift({
+                ...result,
+                timestamp: new Date().toISOString(),
+                user: currentUser,
+                status: 'success'
+            });
+            saveLocalData();
+            updateStats();
+            updateRecentActivity();
+            
+            showScanResult(result);
+        }
+
+        function showScanResult(result) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content success-animation">
+                    <h3 class="text-xl font-bold mb-4 text-center">
+                        <i class="fas fa-check-circle text-green-500 text-3xl"></i>
+                    </h3>
+                    <div class="space-y-2 text-right">
+                        <p><strong>الرقم المسلسل:</strong> ${result.serial_number}</p>
+                        <p><strong>كود البروفيل:</strong> ${result.profile_code}</p>
+                        <p><strong>اللون:</strong> ${result.color}</p>
+                        <p><strong>الطول:</strong> ${result.length}م</p>
+                        <p><strong>الوزن:</strong> ${result.weight}كجم</p>
+                        <p><strong>الموقع:</strong> ${result.location}</p>
+                    </div>
+                    <div class="mt-6 space-y-3">
+                        <button onclick="performCut('${result.serial_number}', ${result.length})" class="btn-primary text-white px-4 py-2 rounded-lg w-full">
+                            <i class="fas fa-cut ml-2"></i>
+                            قطع
+                        </button>
+                        <button onclick="addToStock('${result.serial_number}')" class="bg-green-600 text-white px-4 py-2 rounded-lg w-full">
+                            <i class="fas fa-plus ml-2"></i>
+                            إضافة للمخزون
+                        </button>
+                        <button onclick="closeModal(this)" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg w-full">
+                            إغلاق
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function performCut(serialNumber, currentLength) {
+            const newLength = prompt(`أدخل الطول الجديد (الحالي: ${currentLength}م):`);
+            if (newLength && newLength > 0 && newLength < currentLength) {
+                const wasteLength = currentLength - parseFloat(newLength);
+                const wasteWeight = (wasteLength * localData.settings.weightPerMeter).toFixed(2);
+                
+                // Save cut operation
+                localData.cuts.unshift({
+                    serial_number: serialNumber,
+                    original_length: currentLength,
+                    new_length: parseFloat(newLength),
+                    waste_length: wasteLength,
+                    waste_weight: parseFloat(wasteWeight),
+                    timestamp: new Date().toISOString(),
+                    user: currentUser,
+                    status: 'success'
+                });
+                
+                // Save waste
+                localData.waste.unshift({
+                    serial_number: `WST-${serialNumber}`,
+                    original_serial: serialNumber,
+                    length: wasteLength,
+                    weight: parseFloat(wasteWeight),
+                    timestamp: new Date().toISOString(),
+                    user: currentUser,
+                    status: 'available'
+                });
+                
+                saveLocalData();
+                updateStats();
+                updateRecentActivity();
+                
+                alert(`تم القطع بنجاح!\nالطول الجديد: ${newLength}م\nالفضلة: ${wasteLength}م (${wasteWeight}كجم)`);
+                closeModal(event.target);
+            } else if (newLength) {
+                alert('الطول الجديد يجب أن يكون أصغر من الطول الحالي وأكبر من 0');
+            }
+        }
+
+        function addToStock(serialNumber) {
+            // Add to local stock
+            localData.stock.unshift({
+                serial_number: serialNumber,
+                timestamp: new Date().toISOString(),
+                user: currentUser,
+                status: 'in_stock'
+            });
+            
+            saveLocalData();
+            updateStats();
+            updateRecentActivity();
+            
+            alert(`تم إضافة ${serialNumber} للمخزون بنجاح!`);
+            closeModal(event.target);
+        }
+
+        function quickScan() {
+            startScanning();
+        }
+
+        function quickCut() {
+            const serialNumber = prompt('أدخل الرقم المسلسل للقطعة:');
+            if (serialNumber) {
+                const currentLength = prompt('أدخل الطول الحالي:');
+                if (currentLength) {
+                    performCut(serialNumber, parseFloat(currentLength));
+                }
+            }
+        }
+
+        function addWaste() {
+            const length = prompt('أدخل طول الفضلة (متر):');
+            if (length && length > 0) {
+                const weight = (length * localData.settings.weightPerMeter).toFixed(2);
+                
+                localData.waste.unshift({
+                    serial_number: `WST-MANUAL-${Date.now()}`,
+                    length: parseFloat(length),
+                    weight: parseFloat(weight),
+                    timestamp: new Date().toISOString(),
+                    user: currentUser,
+                    status: 'available',
+                    type: 'manual'
+                });
+                
+                saveLocalData();
+                updateStats();
+                updateRecentActivity();
+                
+                alert(`تم إضافة فضلة يدوية: ${length}م (${weight}كجم)`);
+            }
+        }
+
+        function viewStock() {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            
+            let stockHtml = '';
+            if (localData.stock.length > 0) {
+                stockHtml = localData.stock.slice(0, 10).map(item => `
+                    <div class="bg-gray-50 rounded-lg p-3 mb-2">
+                        <p class="font-bold">${item.serial_number}</p>
+                        <p class="text-sm text-gray-600">${new Date(item.timestamp).toLocaleString('ar-EG')}</p>
+                    </div>
+                `).join('');
+            } else {
+                stockHtml = '<p class="text-gray-500 text-center">لا توجد عناصر في المخزون</p>';
+            }
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3 class="text-xl font-bold mb-4">
+                        <i class="fas fa-boxes text-indigo-600 ml-2"></i>
+                        المخزون (${localData.stock.length} عنصر)
+                    </h3>
+                    <div class="space-y-2 max-h-60 overflow-y-auto">
+                        ${stockHtml}
+                    </div>
+                    <button onclick="closeModal(this)" class="btn-primary text-white px-4 py-2 rounded-lg w-full mt-6">
+                        إغلاق
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function showSection(section) {
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.nav-item').classList.add('active');
+            
+            // Handle different sections
+            switch(section) {
+                case 'scanner':
+                    // Already showing scanner
+                    break;
+                case 'stock':
+                    viewStock();
+                    break;
+                case 'waste':
+                    viewWaste();
+                    break;
+                case 'admin':
+                    if (currentUser === 'admin') {
+                        showAdminPanel();
+                    } else {
+                        alert('لا تملك صلاحيات الوصول للوحة الإدارة');
+                    }
+                    break;
+            }
+        }
+
+        function viewWaste() {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            
+            let wasteHtml = '';
+            if (localData.waste.length > 0) {
+                wasteHtml = localData.waste.slice(0, 10).map(item => `
+                    <div class="bg-orange-50 rounded-lg p-3 mb-2">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-bold">${item.serial_number}</p>
+                                <p class="text-sm text-gray-600">${item.length}م - ${item.weight}كجم</p>
+                                <p class="text-xs text-gray-500">${new Date(item.timestamp).toLocaleString('ar-EG')}</p>
+                            </div>
+                            <span class="waste-indicator">متاح</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                wasteHtml = '<p class="text-gray-500 text-center">لا توجد فضلات متاحة</p>';
+            }
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3 class="text-xl font-bold mb-4">
+                        <i class="fas fa-recycle text-indigo-600 ml-2"></i>
+                        الفضلات (${localData.waste.length} فضلة)
+                    </h3>
+                    <div class="space-y-2 max-h-60 overflow-y-auto">
+                        ${wasteHtml}
+                    </div>
+                    <button onclick="closeModal(this)" class="btn-primary text-white px-4 py-2 rounded-lg w-full mt-6">
+                        إغلاق
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function showAdminPanel() {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3 class="text-xl font-bold mb-4">
+                        <i class="fas fa-cog text-indigo-600 ml-2"></i>
+                        لوحة الإدارة
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">اسم المستخدم</label>
+                            <input type="text" id="admin-username" value="${localData.settings.userName}" class="w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">الوزن لكل متر (كجم)</label>
+                            <input type="number" id="admin-weight" value="${localData.settings.weightPerMeter}" step="0.1" class="w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">رابط الخادم</label>
+                            <input type="text" id="admin-server" value="${serverUrl}" class="w-full p-2 border rounded-lg">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="exportData()" class="bg-blue-600 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-download ml-2"></i>
+                                تصدير
+                            </button>
+                            <button onclick="clearData()" class="bg-red-600 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-trash ml-2"></i>
+                                مسح
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-6 space-y-3">
+                        <button onclick="saveAdminSettings()" class="btn-primary text-white px-4 py-2 rounded-lg w-full">
+                            <i class="fas fa-save ml-2"></i>
+                            حفظ الإعدادات
+                        </button>
+                        <button onclick="closeModal(this)" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg w-full">
+                            إغلاق
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function saveAdminSettings() {
+            localData.settings.userName = document.getElementById('admin-username').value;
+            localData.settings.weightPerMeter = parseFloat(document.getElementById('admin-weight').value);
+            serverUrl = document.getElementById('admin-server').value;
+            
+            saveLocalData();
+            updateUserDisplay();
+            
+            alert('تم حفظ الإعدادات بنجاح');
+            closeModal(event.target);
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(localData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `aluminium_hub_backup_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function clearData() {
+            if (confirm('هل أنت متأكد من مسح جميع البيانات؟ هذا الإجراء لا يمكن التراجع عنه.')) {
+                localData = {
+                    scans: [],
+                    cuts: [],
+                    waste: [],
+                    stock: [],
+                    settings: localData.settings
+                };
+                saveLocalData();
+                updateStats();
+                updateRecentActivity();
+                alert('تم مسح البيانات بنجاح');
+                closeModal(event.target);
+            }
+        }
+
+        function closeModal(element) {
+            const modal = element.closest('.modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('scan-count').textContent = localData.scans.length;
+            document.getElementById('cut-count').textContent = localData.cuts.length;
+            document.getElementById('waste-count').textContent = localData.waste.length;
+        }
+
+        function updateRecentActivity() {
+            const activityContainer = document.getElementById('recent-activity');
+            const allActivities = [
+                ...localData.scans.map(item => ({...item, type: 'scan', icon: 'fa-qrcode', color: 'blue'})),
+                ...localData.cuts.map(item => ({...item, type: 'cut', icon: 'fa-cut', color: 'orange'})),
+                ...localData.waste.map(item => ({...item, type: 'waste', icon: 'fa-recycle', color: 'green'}))
+            ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 5);
+            
+            if (allActivities.length === 0) {
+                activityContainer.innerHTML = '<p class="text-gray-500 text-center">لا يوجد نشاط حتى الآن</p>';
+                return;
+            }
+            
+            activityContainer.innerHTML = allActivities.map(activity => `
+                <div class="bg-white rounded-lg p-3 flex items-center">
+                    <div class="w-10 h-10 bg-${activity.color}-100 rounded-full flex items-center justify-center ml-3">
+                        <i class="fas ${activity.icon} text-${activity.color}-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-bold text-sm">
+                            ${activity.type === 'scan' ? 'مسح QR Code' : 
+                              activity.type === 'cut' ? 'عملية قطع' : 'فضلة جديدة'}
+                        </p>
+                        <p class="text-xs text-gray-600">
+                            ${activity.serial_number} - ${activity.user}
+                        </p>
+                    </div>
+                    <span class="text-xs text-gray-500">
+                        ${new Date(activity.timestamp).toLocaleTimeString('ar-EG', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // Listen for online/offline events
+        window.addEventListener('online', () => {
+            checkConnection();
+        });
+
+        window.addEventListener('offline', () => {
+            isOnline = false;
+        });
+    </script>
+    
+    <script>
+        // Check authentication on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!requireAuth()) {
+                return;
+            }
+            
+            // Initialize user interface
+            initializeUserInterface();
+            
+            // Rest of your existing initialization code
+            checkConnection();
+            updateStats();
+            updateRecentActivity();
+        });
+    </script>
+</body>
+</html>
