@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة الخامات الشامل - Aluminium Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="auth.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .material-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        .material-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        .aluminum { border-left-color: #3b82f6; }
+        .glass { border-left-color: #10b981; }
+        .accessories { border-left-color: #f59e0b; }
+        .sealants { border-left-color: #8b5cf6; }
+        .hardware { border-left-color: #ef4444; }
+        
+        .stock-level {
+            position: relative;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .stock-level-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        .stock-high { background: #10b981; }
+        .stock-medium { background: #f59e0b; }
+        .stock-low { background: #ef4444; }
+        
+        .cost-badge {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
+        .qr-badge {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .material-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 1.5rem;
+        }
+        .aluminum-icon { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .glass-icon { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .accessories-icon { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .sealants-icon { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+        .hardware-icon { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-cubes text-indigo-600 text-2xl ml-2"></i>
+                    <h1 class="text-xl font-bold text-gray-800">نظام إدارة الخامات الشامل</h1>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <button onclick="generateProjectQR()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-qrcode ml-2"></i>
+                        QR للمشروع
+                    </button>
+                    <button onclick="backToDashboard()" class="text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left"></i>
+                        رجوع
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Project Overview -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-project-diagram text-indigo-600 ml-2"></i>
+                        نظرة عامة على المشروع
+                    </h2>
+                    <select id="project-selector" onchange="loadProjectData()" class="px-3 py-2 border rounded-lg">
+                        <option value="curtain-wall">Curtain Wall - برج التكنولوجيا</option>
+                        <option value="sliding-system">Sliding System - فيلا الرياض</option>
+                        <option value="shop-front">Shop Front - مركز تجاري</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-blue-600" id="total-value">0</div>
+                        <div class="text-sm text-gray-600">إجمالي التكلفة (ج.م)</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-green-600" id="aluminum-cost">0</div>
+                        <div class="text-sm text-gray-600">تكلفة الألومنيوم</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-purple-600" id="glass-cost">0</div>
+                        <div class="text-sm text-gray-600">تكلفة الزجاج</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-orange-600" id="accessories-cost">0</div>
+                        <div class="text-sm text-gray-600">تكلفة الإكسسوارات</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Materials Categories -->
+        <section class="mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Aluminum -->
+                <div class="glass-effect rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-800">
+                            <div class="material-icon aluminum-icon inline-flex ml-2">
+                                <i class="fas fa-bars"></i>
+                            </div>
+                            الألومنيوم
+                        </h3>
+                        <button onclick="addMaterial('aluminum')" class="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-plus ml-1"></i>
+                            إضافة
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-3" id="aluminum-items">
+                        <!-- Aluminum items will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Glass -->
+                <div class="glass-effect rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-800">
+                            <div class="material-icon glass-icon inline-flex ml-2">
+                                <i class="fas fa-square"></i>
+                            </div>
+                            الزجاج
+                        </h3>
+                        <button onclick="addMaterial('glass')" class="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-plus ml-1"></i>
+                            إضافة
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-3" id="glass-items">
+                        <!-- Glass items will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Accessories -->
+                <div class="glass-effect rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-800">
+                            <div class="material-icon accessories-icon inline-flex ml-2">
+                                <i class="fas fa-tools"></i>
+                            </div>
+                            الإكسسوارات
+                        </h3>
+                        <button onclick="addMaterial('accessories')" class="bg-orange-600 text-white px-3 py-1 rounded-lg hover:bg-orange-700 transition-colors">
+                            <i class="fas fa-plus ml-1"></i>
+                            إضافة
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-3" id="accessories-items">
+                        <!-- Accessories items will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Sealants & Hardware -->
+                <div class="glass-effect rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-800">
+                            <div class="material-icon sealants-icon inline-flex ml-2">
+                                <i class="fas fa-fill-drip"></i>
+                            </div>
+                            العوازل والقطع
+                        </h3>
+                        <button onclick="addMaterial('sealants')" class="bg-purple-600 text-white px-3 py-1 rounded-lg hover:bg-purple-700 transition-colors">
+                            <i class="fas fa-plus ml-1"></i>
+                            إضافة
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-3" id="sealants-items">
+                        <!-- Sealants items will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Cost Analysis -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-chart-pie text-indigo-600 ml-2"></i>
+                    تحليل التكاليف
+                </h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-lg p-4">
+                        <h3 class="font-semibold mb-3">توزيع التكاليف</h3>
+                        <canvas id="cost-distribution-chart"></canvas>
+                    </div>
+                    <div class="bg-white rounded-lg p-4">
+                        <h3 class="font-semibold mb-3">تتبع الاستهلاك</h3>
+                        <canvas id="consumption-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QR Tracking -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-qrcode text-indigo-600 ml-2"></i>
+                    تتبع المواد بالـ QR
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="qr-tracking">
+                    <!-- QR tracked items will be loaded here -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Add Material Modal -->
+    <div id="add-material-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">إضافة مادة جديدة</h3>
+            <form id="add-material-form">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">اسم المادة</label>
+                        <input type="text" name="name" required class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الكود</label>
+                        <input type="text" name="code" required class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الكمية</label>
+                        <input type="number" name="quantity" required class="w-full p-2 border rounded-lg" step="0.01">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الوحدة</label>
+                        <select name="unit" required class="w-full p-2 border rounded-lg">
+                            <option value="piece">قطعة</option>
+                            <option value="meter">متر</option>
+                            <option value="kg">كيلوجرام</option>
+                            <option value="liter">لتر</option>
+                            <option value="box">صندوق</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">السعر الواحد (ج.م)</label>
+                        <input type="number" name="price" required class="w-full p-2 border rounded-lg" step="0.01">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">المورد</label>
+                        <input type="text" name="supplier" class="w-full p-2 border rounded-lg">
+                    </div>
+                </div>
+                <div class="flex space-x-3 space-x-reverse mt-6">
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg">
+                        إضافة
+                    </button>
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 border rounded-lg">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentProject = 'curtain-wall';
+        let materials = {
+            aluminum: [],
+            glass: [],
+            accessories: [],
+            sealants: []
+        };
+        const API_BASE = '';
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            requireAuth();
+            loadProjectData();
+        });
+
+        // Load project data
+        async function loadProjectData() {
+            currentProject = document.getElementById('project-selector').value;
+            
+            // Mock data for demonstration
+            materials.aluminum = [
+                {
+                    id: 1,
+                    name: 'قطاع ألومنيوم 60x40',
+                    code: 'AL-6040',
+                    quantity: 150,
+                    unit: 'meter',
+                    price: 45,
+                    supplier: 'المصري للألومنيوم',
+                    min_stock: 50,
+                    qr_code: 'AL-6040-QR001'
+                },
+                {
+                    id: 2,
+                    name: 'قطاع ألومنيوم 50x50',
+                    code: 'AL-5050',
+                    quantity: 80,
+                    unit: 'meter',
+                    price: 38,
+                    supplier: 'الألومنيوم العربي',
+                    min_stock: 30,
+                    qr_code: 'AL-5050-QR002'
+                }
+            ];
+            
+            materials.glass = [
+                {
+                    id: 3,
+                    name: 'زجاج مصنفر 6ملم',
+                    code: 'GL-FROSTED-6',
+                    quantity: 45,
+                    unit: 'square_meter',
+                    price: 120,
+                    supplier: 'الزجاج العربي',
+                    min_stock: 20,
+                    qr_code: 'GL-FROSTED-6-QR001'
+                },
+                {
+                    id: 4,
+                    name: 'زجاج مزدوج 12ملم',
+                    code: 'GL-DBL-12',
+                    quantity: 25,
+                    unit: 'square_meter',
+                    price: 280,
+                    supplier: 'الزجاج المتميز',
+                    min_stock: 10,
+                    qr_code: 'GL-DBL-12-QR001'
+                }
+            ];
+            
+            materials.accessories = [
+                {
+                    id: 5,
+                    name: 'مقبض باب ستانليس',
+                    code: 'HD-SS-001',
+                    quantity: 30,
+                    unit: 'piece',
+                    price: 85,
+                    supplier: 'الإكسسوارات الحديثة',
+                    min_stock: 10,
+                    qr_code: 'HD-SS-001-QR001'
+                },
+                {
+                    id: 6,
+                    name: 'مفصلة باب زجاج',
+                    code: 'HG-GL-001',
+                    quantity: 60,
+                    unit: 'piece',
+                    price: 25,
+                    supplier: 'مفصلات الذهب',
+                    min_stock: 20,
+                    qr_code: 'HG-GL-001-QR001'
+                },
+                {
+                    id: 7,
+                    name: 'كاوتش باب',
+                    code: 'GR-DOOR-001',
+                    quantity: 40,
+                    unit: 'meter',
+                    price: 15,
+                    supplier: 'الختم المثالي',
+                    min_stock: 15,
+                    qr_code: 'GR-DOOR-001-QR001'
+                }
+            ];
+            
+            materials.sealants = [
+                {
+                    id: 8,
+                    name: 'سيليكون أسود',
+                    code: 'SL-BLK-001',
+                    quantity: 12,
+                    unit: 'liter',
+                    price: 65,
+                    supplier: 'المواد الكيميائية',
+                    min_stock: 5,
+                    qr_code: 'SL-BLK-001-QR001'
+                },
+                {
+                    id: 9,
+                    name: 'شريط عازل',
+                    code: 'TP-INS-001',
+                    quantity: 25,
+                    unit: 'roll',
+                    price: 35,
+                    supplier: 'العزل الحراري',
+                    min_stock: 8,
+                    qr_code: 'TP-INS-001-QR001'
+                }
+            ];
+            
+            displayMaterials();
+            updateProjectStats();
+            loadCharts();
+        }
+
+        // Display materials
+        function displayMaterials() {
+            displayMaterialCategory('aluminum', materials.aluminum);
+            displayMaterialCategory('glass', materials.glass);
+            displayMaterialCategory('accessories', materials.accessories);
+            displayMaterialCategory('sealants', materials.sealants);
+            displayQRTracking();
+        }
+
+        // Display material category
+        function displayMaterialCategory(category, items) {
+            const container = document.getElementById(`${category}-items`);
+            
+            container.innerHTML = items.map(item => {
+                const stockLevel = getStockLevel(item.quantity, item.min_stock);
+                const totalValue = item.quantity * item.price;
+                
+                return `
+                    <div class="material-card ${category} bg-white rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <div class="font-bold">${item.name}</div>
+                                <div class="text-sm text-gray-600">${item.code}</div>
+                            </div>
+                            <div class="text-left">
+                                <div class="qr-badge">QR</div>
+                                <div class="text-sm text-gray-600">${item.qr_code}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <div class="text-sm text-gray-600">الكمية</div>
+                                <div class="font-semibold">${item.quantity} ${getUnitName(item.unit)}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">السعر</div>
+                                <div class="font-semibold">${item.price} ج.م</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm text-gray-600">مستوى المخزون</span>
+                                <span class="text-sm font-semibold ${stockLevel.class}">${stockLevel.text}</span>
+                            </div>
+                            <div class="stock-level">
+                                <div class="stock-level-fill ${stockLevel.class}" style="width: ${stockLevel.percentage}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-gray-600">
+                                <i class="fas fa-truck ml-1"></i>
+                                ${item.supplier}
+                            </div>
+                            <div class="cost-badge">${totalValue.toFixed(2)} ج.م</div>
+                        </div>
+                        
+                        <div class="flex space-x-2 space-x-reverse mt-3 pt-3 border-t">
+                            <button onclick="scanMaterial('${item.qr_code}')" class="flex-1 bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors text-sm">
+                                <i class="fas fa-qrcode ml-1"></i>
+                                مسح
+                            </button>
+                            <button onclick="editMaterial(${item.id})" class="flex-1 bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors text-sm">
+                                <i class="fas fa-edit ml-1"></i>
+                                تعديل
+                            </button>
+                            <button onclick="trackUsage(${item.id})" class="flex-1 bg-orange-600 text-white px-2 py-1 rounded hover:bg-orange-700 transition-colors text-sm">
+                                <i class="fas fa-chart-line ml-1"></i>
+                                استهلاك
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Get stock level
+        function getStockLevel(quantity, minStock) {
+            const percentage = (quantity / minStock) * 100;
+            
+            if (percentage >= 150) {
+                return { percentage: Math.min(100, percentage), class: 'stock-high', text: 'مرتفع' };
+            } else if (percentage >= 100) {
+                return { percentage: Math.min(100, percentage), class: 'stock-medium', text: 'متوسط' };
+            } else {
+                return { percentage: Math.min(100, percentage), class: 'stock-low', text: 'منخفض' };
+            }
+        }
+
+        // Get unit name
+        function getUnitName(unit) {
+            const names = {
+                piece: 'قطعة',
+                meter: 'متر',
+                kg: 'كجم',
+                liter: 'لتر',
+                square_meter: 'م²',
+                box: 'صندوق',
+                roll: 'لفة'
+            };
+            return names[unit] || unit;
+        }
+
+        // Update project statistics
+        function updateProjectStats() {
+            let totalValue = 0;
+            let aluminumCost = 0;
+            let glassCost = 0;
+            let accessoriesCost = 0;
+            
+            // Calculate costs
+            materials.aluminum.forEach(item => {
+                const value = item.quantity * item.price;
+                totalValue += value;
+                aluminumCost += value;
+            });
+            
+            materials.glass.forEach(item => {
+                const value = item.quantity * item.price;
+                totalValue += value;
+                glassCost += value;
+            });
+            
+            materials.accessories.forEach(item => {
+                const value = item.quantity * item.price;
+                totalValue += value;
+                accessoriesCost += value;
+            });
+            
+            materials.sealants.forEach(item => {
+                totalValue += item.quantity * item.price;
+            });
+            
+            // Update display
+            document.getElementById('total-value').textContent = totalValue.toFixed(2);
+            document.getElementById('aluminum-cost').textContent = aluminumCost.toFixed(2);
+            document.getElementById('glass-cost').textContent = glassCost.toFixed(2);
+            document.getElementById('accessories-cost').textContent = accessoriesCost.toFixed(2);
+        }
+
+        // Display QR tracking
+        function displayQRTracking() {
+            const container = document.getElementById('qr-tracking');
+            const allMaterials = [
+                ...materials.aluminum,
+                ...materials.glass,
+                ...materials.accessories,
+                ...materials.sealants
+            ];
+            
+            container.innerHTML = allMaterials.slice(0, 8).map(item => `
+                <div class="bg-white rounded-lg p-4 text-center hover:shadow-lg transition-shadow">
+                    <div class="text-3xl mb-2 text-indigo-600">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <div class="font-bold text-sm mb-1">${item.code}</div>
+                    <div class="text-xs text-gray-600 mb-2">${item.qr_code}</div>
+                    <button onclick="scanMaterial('${item.qr_code}')" class="w-full bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 transition-colors text-sm">
+                        مسح الآن
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Load charts
+        function loadCharts() {
+            // Cost Distribution Chart
+            const costCtx = document.getElementById('cost-distribution-chart').getContext('2d');
+            new Chart(costCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['الألومنيوم', 'الزجاج', 'الإكسسوارات', 'العوازل'],
+                    datasets: [{
+                        data: [
+                            materials.aluminum.reduce((sum, item) => sum + (item.quantity * item.price), 0),
+                            materials.glass.reduce((sum, item) => sum + (item.quantity * item.price), 0),
+                            materials.accessories.reduce((sum, item) => sum + (item.quantity * item.price), 0),
+                            materials.sealants.reduce((sum, item) => sum + (item.quantity * item.price), 0)
+                        ],
+                        backgroundColor: [
+                            '#3b82f6',
+                            '#10b981',
+                            '#f59e0b',
+                            '#8b5cf6'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            
+            // Consumption Chart
+            const consumptionCtx = document.getElementById('consumption-chart').getContext('2d');
+            new Chart(consumptionCtx, {
+                type: 'line',
+                data: {
+                    labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+                    datasets: [{
+                        label: 'الألومنيوم',
+                        data: [12, 19, 15, 25, 22, 30],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'الزجاج',
+                        data: [8, 12, 10, 18, 15, 22],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Action functions
+        function addMaterial(category) {
+            currentCategory = category;
+            document.getElementById('add-material-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('add-material-modal').style.display = 'none';
+        }
+
+        function scanMaterial(qrCode) {
+            alert(`سيتم مسح المادة: ${qrCode}\nسيتم تحديث المخزون تلقائياً.`);
+        }
+
+        function editMaterial(id) {
+            alert(`تعديل المادة رقم: ${id}`);
+        }
+
+        function trackUsage(id) {
+            alert(`تتبع استهلاك المادة رقم: ${id}`);
+        }
+
+        function generateProjectQR() {
+            alert(`سيتم توليد QR Code للمشروع: ${currentProject}\nيحتوي على جميع المواد المطلوبة للمشروع.`);
+        }
+
+        function backToDashboard() {
+            window.location.href = 'admin_dashboard_real.html';
+        }
+
+        // Form handler
+        document.getElementById('add-material-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const newMaterial = {
+                id: Date.now(),
+                name: formData.get('name'),
+                code: formData.get('code'),
+                quantity: parseFloat(formData.get('quantity')),
+                unit: formData.get('unit'),
+                price: parseFloat(formData.get('price')),
+                supplier: formData.get('supplier'),
+                min_stock: 10,
+                qr_code: `${formData.get('code')}-QR${Date.now()}`
+            };
+            
+            materials[currentCategory].push(newMaterial);
+            displayMaterials();
+            updateProjectStats();
+            closeModal();
+            e.target.reset();
+        });
+    </script>
+</body>
+</html>

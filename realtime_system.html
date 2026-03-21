@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الربط اللحظي - Aluminium Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="auth.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .live-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .activity-feed {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .activity-item {
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        .activity-item:hover {
+            transform: translateX(-5px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .scan-activity { border-left-color: #3b82f6; }
+        .cut-activity { border-left-color: #f59e0b; }
+        .waste-activity { border-left-color: #ef4444; }
+        .approval-activity { border-left-color: #10b981; }
+        
+        .notification-card {
+            transition: all 0.3s ease;
+            border-right: 4px solid transparent;
+        }
+        .notification-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+        .urgent { border-right-color: #ef4444; }
+        .normal { border-right-color: #3b82f6; }
+        .success { border-right-color: #10b981; }
+        
+        .workshop-status {
+            position: relative;
+            overflow: hidden;
+        }
+        .workshop-status::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        .qr-preview {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="live-indicator ml-3"></div>
+                    <i class="fas fa-satellite-dish text-indigo-600 text-2xl ml-2"></i>
+                    <h1 class="text-xl font-bold text-gray-800">نظام الربط اللحظي</h1>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <span class="text-sm text-gray-600">آخر تحديث: <span id="last-update">--:--</span></span>
+                    <button onclick="toggleAutoRefresh()" id="auto-refresh-btn" class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm">
+                        <i class="fas fa-sync-alt ml-1"></i>
+                        تحديث تلقائي: مفعل
+                    </button>
+                    <button onclick="backToDashboard()" class="text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left"></i>
+                        رجوع
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Live Workshop Status -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-broadcast-tower text-indigo-600 ml-2"></i>
+                    حالة الورشة الحية
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-lg p-4 workshop-status">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-semibold">العمال النشطون</h3>
+                            <span class="text-green-600 text-sm font-bold">3/5</span>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-sm">
+                                <span><i class="fas fa-user text-blue-600 ml-2"></i>أحمد محمد</span>
+                                <span class="text-green-600">نشط</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span><i class="fas fa-user text-blue-600 ml-2"></i>محمد علي</span>
+                                <span class="text-green-600">نشط</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span><i class="fas fa-user text-blue-600 ml-2"></i>عمر خالد</span>
+                                <span class="text-orange-600">مستريح</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg p-4 workshop-status">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-semibold">العمليات الحالية</h3>
+                            <span class="text-blue-600 text-sm font-bold">7</span>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-sm">
+                                <span><i class="fas fa-cut text-orange-600 ml-2"></i>قطع قطاع</span>
+                                <span class="text-blue-600">جاري</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span><i class="fas fa-qrcode text-blue-600 ml-2"></i>مسح QR</span>
+                                <span class="text-green-600">مكتمل</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span><i class="fas fa-recycle text-green-600 ml-2"></i>تسجيل فضلة</span>
+                                <span class="text-blue-600">جاري</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg p-4 workshop-status">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-semibold">الأوامر النشطة</h3>
+                            <span class="text-purple-600 text-sm font-bold">4</span>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-sm">
+                                <span>أمر #1234</span>
+                                <span class="text-orange-600">75%</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span>أمر #1235</span>
+                                <span class="text-blue-600">45%</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span>أمر #1236</span>
+                                <span class="text-green-600">100%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Real-time Activity Feed -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-stream text-indigo-600 ml-2"></i>
+                        النشاط الحي
+                    </h2>
+                    <div class="flex items-center space-x-2 space-x-reverse">
+                        <span class="text-sm text-gray-600">الفلترة:</span>
+                        <select onchange="filterActivity(this.value)" class="px-3 py-1 border rounded-lg">
+                            <option value="all">الكل</option>
+                            <option value="scan">مسح</option>
+                            <option value="cut">قطع</option>
+                            <option value="waste">فضلات</option>
+                            <option value="approval">موافقات</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="activity-feed" id="activity-feed">
+                    <!-- Activity items will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Instant Notifications -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-bell text-indigo-600 ml-2"></i>
+                    الإشعارات الفورية
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="notifications-container">
+                    <!-- Notifications will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- QR Generation -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-qrcode text-indigo-600 ml-2"></i>
+                    توليد QR فوري
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="font-semibold mb-3">إنشاء QR للفضلة</h3>
+                        <form id="waste-qr-form" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">الرقم المسلسل الأصلي</label>
+                                <input type="text" id="original-serial" required class="w-full p-2 border rounded-lg" placeholder="مثال: ALU-0001">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">الطول المتبقي (مم)</label>
+                                <input type="number" id="remaining-length" required class="w-full p-2 border rounded-lg" placeholder="مثال: 2500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">السبب</label>
+                                <select id="waste-reason" required class="w-full p-2 border rounded-lg">
+                                    <option value="cut">بعد عملية قطع</option>
+                                    <option value="damage">تلف</option>
+                                    <option value="return">مرتجع من العميل</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                                <i class="fas fa-qrcode ml-2"></i>
+                                توليد QR للفضلة
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold mb-3">معاينة QR</h3>
+                        <div id="qr-preview" class="qr-preview">
+                            <i class="fas fa-qrcode text-6xl text-gray-300 mb-3"></i>
+                            <p class="text-gray-600">سيتم عرض QR Code هنا بعد التوليد</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Global variables
+        let autoRefresh = true;
+        let refreshInterval = null;
+        let activities = [];
+        let notifications = [];
+        const API_BASE = '';
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            requireAuth();
+            startRealtimeSystem();
+        });
+
+        // Start realtime system
+        function startRealtimeSystem() {
+            loadRealtimeData();
+            
+            if (autoRefresh) {
+                refreshInterval = setInterval(() => {
+                    loadRealtimeData();
+                }, 5000); // Refresh every 5 seconds
+            }
+        }
+
+        // Load realtime data
+        async function loadRealtimeData() {
+            await loadActivityFeed();
+            await loadNotifications();
+            await updateWorkshopStatus();
+            updateLastUpdateTime();
+        }
+
+        // Load activity feed
+        async function loadActivityFeed() {
+            // Mock real-time activities
+            activities = [
+                {
+                    id: 1,
+                    type: 'scan',
+                    user: 'أحمد محمد',
+                    action: 'مسح QR Code',
+                    details: 'ALU-0012',
+                    timestamp: new Date(Date.now() - 10000),
+                    location: 'ورشة الألومنيوم'
+                },
+                {
+                    id: 2,
+                    type: 'cut',
+                    user: 'محمد علي',
+                    action: 'عملية قطع',
+                    details: 'ALU-0012 → قطعة 2500مم',
+                    timestamp: new Date(Date.now() - 30000),
+                    location: 'ماكينة القطع'
+                },
+                {
+                    id: 3,
+                    type: 'waste',
+                    user: 'أحمد محمد',
+                    action: 'تسجيل فضلة',
+                    details: 'ALU-0012 → فضلة 3500مم',
+                    timestamp: new Date(Date.now() - 60000),
+                    location: 'ورشة الألومنيوم'
+                },
+                {
+                    id: 4,
+                    type: 'approval',
+                    user: 'المدير',
+                    action: 'موافقة على أمر شغل',
+                    details: 'أمر #1234 - Curtain Wall',
+                    timestamp: new Date(Date.now() - 120000),
+                    location: 'المكتب'
+                },
+                {
+                    id: 5,
+                    type: 'scan',
+                    user: 'عمر خالد',
+                    action: 'مسح QR Code',
+                    details: 'GL-FROSTED-001',
+                    timestamp: new Date(Date.now() - 180000),
+                    location: 'مخزن الزجاج'
+                }
+            ];
+            
+            displayActivityFeed();
+        }
+
+        // Display activity feed
+        function displayActivityFeed() {
+            const container = document.getElementById('activity-feed');
+            
+            container.innerHTML = activities.map(activity => {
+                const timeAgo = getTimeAgo(activity.timestamp);
+                const icon = getActivityIcon(activity.type);
+                const bgColor = getActivityBgColor(activity.type);
+                
+                return `
+                    <div class="activity-item ${activity.type}-activity bg-white rounded-lg p-4 mb-3">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start">
+                                <div class="text-2xl ml-3 ${bgColor}">
+                                    <i class="${icon}"></i>
+                                </div>
+                                <div>
+                                    <div class="font-semibold">${activity.action}</div>
+                                    <div class="text-sm text-gray-600">${activity.details}</div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        <i class="fas fa-user ml-1"></i>${activity.user} • 
+                                        <i class="fas fa-map-marker-alt ml-1"></i>${activity.location}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-left">
+                                <div class="text-xs text-gray-500">${timeAgo}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Load notifications
+        async function loadNotifications() {
+            // Mock notifications
+            notifications = [
+                {
+                    id: 1,
+                    type: 'urgent',
+                    title: 'مخزون منخفض',
+                    message: 'قطاع الألومنيوم 60x40 وصل للحد الأدنى',
+                    timestamp: new Date(Date.now() - 300000),
+                    action: 'عرض المخزون'
+                },
+                {
+                    id: 2,
+                    type: 'normal',
+                    title: 'أمر شغل جديد',
+                    message: 'تم إنشاء أمر شغل #1237',
+                    timestamp: new Date(Date.now() - 600000),
+                    action: 'عرض التفاصيل'
+                },
+                {
+                    id: 3,
+                    type: 'success',
+                    title: 'اكتمال المشروع',
+                    message: 'مشروع فيلا الرياض تم بنجاح',
+                    timestamp: new Date(Date.now() - 900000),
+                    action: 'عرض التقرير'
+                }
+            ];
+            
+            displayNotifications();
+        }
+
+        // Display notifications
+        function displayNotifications() {
+            const container = document.getElementById('notifications-container');
+            
+            container.innerHTML = notifications.map(notification => {
+                const timeAgo = getTimeAgo(notification.timestamp);
+                const icon = getNotificationIcon(notification.type);
+                
+                return `
+                    <div class="notification-card ${notification.type} bg-white rounded-lg p-4">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex items-center">
+                                <div class="text-xl ml-2">
+                                    <i class="${icon}"></i>
+                                </div>
+                                <h4 class="font-semibold">${notification.title}</h4>
+                            </div>
+                            <span class="text-xs text-gray-500">${timeAgo}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-3">${notification.message}</p>
+                        <button onclick="handleNotification(${notification.id})" class="text-indigo-600 text-sm font-semibold hover:text-indigo-800">
+                            ${notification.action} →
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update workshop status
+        async function updateWorkshopStatus() {
+            // Mock workshop status update
+            console.log('Updating workshop status...');
+        }
+
+        // Helper functions
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const diff = now - timestamp;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            
+            if (seconds < 60) return 'الآن';
+            if (minutes < 60) return `منذ ${minutes} دقيقة`;
+            if (hours < 24) return `منذ ${hours} ساعة`;
+            return `منذ ${Math.floor(hours / 24)} يوم`;
+        }
+
+        function getActivityIcon(type) {
+            const icons = {
+                scan: 'fas fa-qrcode',
+                cut: 'fas fa-cut',
+                waste: 'fas fa-recycle',
+                approval: 'fas fa-check-circle'
+            };
+            return icons[type] || 'fas fa-circle';
+        }
+
+        function getActivityBgColor(type) {
+            const colors = {
+                scan: 'text-blue-600',
+                cut: 'text-orange-600',
+                waste: 'text-green-600',
+                approval: 'text-purple-600'
+            };
+            return colors[type] || 'text-gray-600';
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                urgent: 'fas fa-exclamation-triangle text-red-600',
+                normal: 'fas fa-info-circle text-blue-600',
+                success: 'fas fa-check-circle text-green-600'
+            };
+            return icons[type] || 'fas fa-bell text-gray-600';
+        }
+
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('last-update').textContent = now.toLocaleTimeString('ar-EG');
+        }
+
+        // Action functions
+        function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const btn = document.getElementById('auto-refresh-btn');
+            
+            if (autoRefresh) {
+                refreshInterval = setInterval(() => {
+                    loadRealtimeData();
+                }, 5000);
+                btn.innerHTML = '<i class="fas fa-sync-alt ml-1"></i>تحديث تلقائي: مفعل';
+                btn.classList.remove('bg-gray-600');
+                btn.classList.add('bg-indigo-600');
+            } else {
+                clearInterval(refreshInterval);
+                btn.innerHTML = '<i class="fas fa-sync-alt ml-1"></i>تحديث تلقائي: معطل';
+                btn.classList.remove('bg-indigo-600');
+                btn.classList.add('bg-gray-600');
+            }
+        }
+
+        function filterActivity(type) {
+            const filteredActivities = type === 'all' 
+                ? activities 
+                : activities.filter(a => a.type === type);
+            
+            const container = document.getElementById('activity-feed');
+            if (filteredActivities.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-8">لا يوجد نشاط في هذه الفئة</p>';
+            } else {
+                // Reuse display logic but with filtered data
+                activities = filteredActivities;
+                displayActivityFeed();
+                activities = activities.concat(filteredActivities); // Restore original data
+            }
+        }
+
+        function handleNotification(id) {
+            const notification = notifications.find(n => n.id === id);
+            if (notification) {
+                alert(`معالجة الإشعار: ${notification.title}\n${notification.message}`);
+            }
+        }
+
+        function backToDashboard() {
+            window.location.href = 'admin_dashboard_real.html';
+        }
+
+        // QR Form handler
+        document.getElementById('waste-qr-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const originalSerial = document.getElementById('original-serial').value;
+            const remainingLength = document.getElementById('remaining-length').value;
+            const wasteReason = document.getElementById('waste-reason').value;
+            
+            // Generate QR code data
+            const qrData = {
+                type: 'waste',
+                original_serial: originalSerial,
+                remaining_length: remainingLength,
+                reason: wasteReason,
+                timestamp: new Date().toISOString(),
+                generated_by: getCurrentUser()?.username || 'unknown'
+            };
+            
+            // Update QR preview
+            const preview = document.getElementById('qr-preview');
+            preview.innerHTML = `
+                <div class="mb-3">
+                    <div class="text-4xl mb-2">📱</div>
+                    <div class="font-bold text-sm">QR Code تم إنشاؤه</div>
+                </div>
+                <div class="text-xs text-gray-600 space-y-1">
+                    <div><strong>الرقم:</strong> WASTE-${Date.now()}</div>
+                    <div><strong>الأصلي:</strong> ${originalSerial}</div>
+                    <div><strong>الطول:</strong> ${remainingLength}مم</div>
+                    <div><strong>السبب:</strong> ${wasteReason}</div>
+                </div>
+                <button onclick="printQR('${JSON.stringify(qrData)}')" class="mt-3 bg-indigo-600 text-white px-3 py-1 rounded text-sm">
+                    <i class="fas fa-print ml-1"></i>
+                    طباعة
+                </button>
+            `;
+            
+            // Show success message
+            alert(`تم توليد QR Code للفضلة بنجاح!\nالرقم: WASTE-${Date.now()}`);
+            
+            // Reset form
+            e.target.reset();
+        });
+
+        function printQR(qrData) {
+            alert(`سيتم طباعة QR Code:\n${qrData}`);
+        }
+    </script>
+</body>
+</html>
