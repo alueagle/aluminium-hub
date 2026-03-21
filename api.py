@@ -6,7 +6,7 @@ Aluminium Hub API
 """
 
 from flask import Flask, request, jsonify, render_template_string
-from database import AluminiumDatabase, init_database
+from database_minimal import AluminiumDatabase, init_database
 import json
 from datetime import datetime
 import logging
