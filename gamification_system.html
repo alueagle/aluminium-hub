@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام التحفيز والمكافآت - Aluminium Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="auth.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .achievement-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .achievement-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            border-color: #f59e0b;
+        }
+        .achievement-unlocked {
+            border-color: #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), transparent);
+        }
+        .achievement-locked {
+            opacity: 0.6;
+            filter: grayscale(100%);
+        }
+        .points-badge {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+        .leaderboard-item {
+            transition: all 0.3s ease;
+        }
+        .leaderboard-item:hover {
+            transform: translateX(-5px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .rank-1 { border-left: 4px solid #ffd700; }
+        .rank-2 { border-left: 4px solid #c0c0c0; }
+        .rank-3 { border-left: 4px solid #cd7f32; }
+        .streak-fire {
+            animation: fire 1.5s ease-in-out infinite;
+        }
+        @keyframes fire {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .pulse-glow {
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.8); }
+        }
+        .reward-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .reward-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        .reward-card.claimed {
+            opacity: 0.6;
+            background: #f3f4f6;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-trophy text-yellow-500 text-2xl ml-2"></i>
+                    <h1 class="text-xl font-bold text-gray-800">نظام التحفيز والمكافآت</h1>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <div class="points-badge pulse-glow">
+                        <i class="fas fa-coins ml-2"></i>
+                        <span id="user-points">0</span> نقطة
+                    </div>
+                    <button onclick="backToApp()" class="text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left"></i>
+                        رجوع
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- User Stats -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-user-chart text-indigo-600 ml-2"></i>
+                        إحصائياتي
+                    </h2>
+                    <div class="flex items-center space-x-4 space-x-reverse">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-orange-600" id="streak-days">0</div>
+                            <div class="text-sm text-gray-600">أيام متتالية</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600" id="weekly-scans">0</div>
+                            <div class="text-sm text-gray-600">مسح أسبوعي</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600" id="accuracy-rate">0%</div>
+                            <div class="text-sm text-gray-600">دقة البيانات</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Bars -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-semibold">مستوى الخبرة</span>
+                            <span class="text-sm text-gray-600">المستوى 5</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full" style="width: 65%"></div>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-1">650 / 1000 نقطة للمستوى التالي</div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-semibold">مسح مزدوج</span>
+                            <span class="text-sm text-gray-600">85%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="bg-gradient-to-r from-blue-400 to-blue-600 h-3 rounded-full" style="width: 85%"></div>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-1">17 / 20 عملية هذا الأسبوع</div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-semibold">دقة البيانات</span>
+                            <span class="text-sm text-gray-600">92%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="bg-gradient-to-r from-purple-400 to-purple-600 h-3 rounded-full" style="width: 92%"></div>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-1">ممتاز! استمر في التحسين</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Achievements -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-medal text-yellow-500 ml-2"></i>
+                    الإنجازات
+                </h2>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="achievements-grid">
+                    <!-- Achievements will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Leaderboard -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-crown text-yellow-500 ml-2"></i>
+                        لوحة المتصدرين
+                    </h2>
+                    <select onchange="changeLeaderboardPeriod(this.value)" class="px-3 py-1 border rounded-lg">
+                        <option value="daily">يومي</option>
+                        <option value="weekly">أسبوعي</option>
+                        <option value="monthly">شهري</option>
+                    </select>
+                </div>
+                
+                <div class="space-y-2" id="leaderboard-list">
+                    <!-- Leaderboard will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Rewards Store -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-gift text-purple-600 ml-2"></i>
+                    متجر المكافآت
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="rewards-store">
+                    <!-- Rewards will be loaded here -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Global variables
+        let currentUser = null;
+        let userStats = null;
+        let achievements = [];
+        let leaderboard = [];
+        let rewards = [];
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            requireAuth();
+            currentUser = getCurrentUser();
+            loadGamificationData();
+        });
+
+        // Load gamification data
+        async function loadGamificationData() {
+            await loadUserStats();
+            await loadAchievements();
+            await loadLeaderboard('weekly');
+            await loadRewards();
+        }
+
+        // Load user statistics
+        async function loadUserStats() {
+            // Mock data for demonstration
+            userStats = {
+                points: 1250,
+                streak_days: 7,
+                weekly_scans: 45,
+                accuracy_rate: 92,
+                level: 5,
+                double_scan_percentage: 85,
+                next_level_points: 1000
+            };
+            
+            updateUserStats();
+        }
+
+        // Update user stats display
+        function updateUserStats() {
+            document.getElementById('user-points').textContent = userStats.points;
+            document.getElementById('streak-days').textContent = userStats.streak_days;
+            document.getElementById('weekly-scans').textContent = userStats.weekly_scans;
+            document.getElementById('accuracy-rate').textContent = userStats.accuracy_rate + '%';
+        }
+
+        // Load achievements
+        async function loadAchievements() {
+            // Mock achievements data
+            achievements = [
+                {
+                    id: 1,
+                    title: 'أول مسح',
+                    description: 'قم بأول عملية مسح',
+                    icon: 'fa-qrcode',
+                    points: 10,
+                    unlocked: true,
+                    date_unlocked: '2024-01-15'
+                },
+                {
+                    id: 2,
+                    title: 'مسح مزدوج',
+                    description: 'قم بمسح القطعة مرتين (بداية ونهاية)',
+                    icon: 'fa-check-double',
+                    points: 25,
+                    unlocked: true,
+                    date_unlocked: '2024-01-16'
+                },
+                {
+                    id: 3,
+                    title: 'أسبوع نشط',
+                    description: 'قم بـ 50 عملية مسح في أسبوع',
+                    icon: 'fa-calendar-week',
+                    points: 100,
+                    unlocked: true,
+                    date_unlocked: '2024-01-22'
+                },
+                {
+                    id: 4,
+                    title: 'دقة مثالية',
+                    description: 'حقق دقة 100% في البيانات لمدة أسبوع',
+                    icon: 'fa-bullseye',
+                    points: 150,
+                    unlocked: false,
+                    progress: 85
+                },
+                {
+                    id: 5,
+                    title: 'سيد المسح',
+                    description: 'قم بـ 1000 عملية مسح',
+                    icon: 'fa-crown',
+                    points: 500,
+                    unlocked: false,
+                    progress: 45
+                },
+                {
+                    id: 6,
+                    title: 'صانع الفضلات',
+                    description: 'قلل الفضلات بنسبة 50% لمدة شهر',
+                    icon: 'fa-recycle',
+                    points: 300,
+                    unlocked: false,
+                    progress: 30
+                },
+                {
+                    id: 7,
+                    title: 'النمر الخارق',
+                    description: 'حقق 100 نقطة في يوم واحد',
+                    icon: 'fa-fire',
+                    points: 200,
+                    unlocked: false,
+                    progress: 65
+                },
+                {
+                    id: 8,
+                    title: 'أسطورة الورشة',
+                    description: 'احتفظ بالمرتبة الأولى لمدة شهر',
+                    icon: 'fa-star',
+                    points: 1000,
+                    unlocked: false,
+                    progress: 10
+                }
+            ];
+            
+            displayAchievements();
+        }
+
+        // Display achievements
+        function displayAchievements() {
+            const container = document.getElementById('achievements-grid');
+            
+            container.innerHTML = achievements.map(achievement => `
+                <div class="achievement-card ${achievement.unlocked ? 'achievement-unlocked' : 'achievement-locked'} bg-white rounded-lg p-4 text-center">
+                    <div class="text-4xl mb-3 ${achievement.unlocked ? 'text-yellow-500' : 'text-gray-400'}">
+                        <i class="fas ${achievement.icon}"></i>
+                    </div>
+                    <h3 class="font-bold text-sm mb-2">${achievement.title}</h3>
+                    <p class="text-xs text-gray-600 mb-2">${achievement.description}</p>
+                    <div class="text-xs font-semibold text-indigo-600">+${achievement.points} نقطة</div>
+                    ${achievement.unlocked ? 
+                        `<div class="text-xs text-green-600 mt-2">
+                            <i class="fas fa-check-circle ml-1"></i>
+                            ${achievement.date_unlocked}
+                        </div>` :
+                        achievement.progress ? 
+                        `<div class="mt-2">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-indigo-600 h-2 rounded-full" style="width: ${achievement.progress}%"></div>
+                            </div>
+                            <div class="text-xs text-gray-600 mt-1">${achievement.progress}%</div>
+                        </div>` : ''
+                    }
+                </div>
+            `).join('');
+        }
+
+        // Load leaderboard
+        async function loadLeaderboard(period = 'weekly') {
+            // Mock leaderboard data
+            leaderboard = [
+                { rank: 1, name: 'أحمد محمد', points: 2850, scans: 120, accuracy: 98, avatar: '👨‍🔧' },
+                { rank: 2, name: 'محمد علي', points: 2650, scans: 115, accuracy: 95, avatar: '👷‍♂️' },
+                { rank: 3, name: currentUser?.full_name || 'أنت', points: userStats?.points || 1250, scans: 45, accuracy: 92, avatar: '🎯' },
+                { rank: 4, name: 'عمر خالد', points: 2200, scans: 98, accuracy: 90, avatar: '👨‍🏭' },
+                { rank: 5, name: 'خالد سعيد', points: 1950, scans: 85, accuracy: 88, avatar: '🔧' }
+            ];
+            
+            displayLeaderboard();
+        }
+
+        // Display leaderboard
+        function displayLeaderboard() {
+            const container = document.getElementById('leaderboard-list');
+            
+            container.innerHTML = leaderboard.map(user => `
+                <div class="leaderboard-item bg-white rounded-lg p-4 flex items-center ${user.rank === 3 ? 'rank-3' : user.rank === 2 ? 'rank-2' : user.rank === 1 ? 'rank-1' : ''}">
+                    <div class="text-2xl font-bold ml-4 ${user.rank === 1 ? 'text-yellow-500' : user.rank === 2 ? 'text-gray-400' : user.rank === 3 ? 'text-orange-600' : 'text-gray-600'}">
+                        ${user.rank === 1 ? '🥇' : user.rank === 2 ? '🥈' : user.rank === 3 ? '🥉' : user.rank}
+                    </div>
+                    <div class="text-3xl ml-3">${user.avatar}</div>
+                    <div class="flex-1 mr-3">
+                        <div class="font-bold text-lg">${user.name}</div>
+                        <div class="text-sm text-gray-600">
+                            ${user.scans} مسح • دقة ${user.accuracy}%
+                        </div>
+                    </div>
+                    <div class="text-left">
+                        <div class="text-xl font-bold text-indigo-600">${user.points}</div>
+                        <div class="text-xs text-gray-600">نقطة</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load rewards store
+        async function loadRewards() {
+            // Mock rewards data
+            rewards = [
+                {
+                    id: 1,
+                    title: 'استراحة إضافية',
+                    description: 'ساعة إضافية مدفوعة الأجر',
+                    points_cost: 500,
+                    icon: 'fa-coffee',
+                    category: 'time',
+                    claimed: false
+                },
+                {
+                    id: 2,
+                    title: 'وجبة مجانية',
+                    description: 'وجبة غداء مجانية من الكافتيريا',
+                    points_cost: 300,
+                    icon: 'fa-utensils',
+                    category: 'food',
+                    claimed: false
+                },
+                {
+                    id: 3,
+                    title: 'يوم إجازة',
+                    description: 'يوم إجازة مدفوعة الأجر',
+                    points_cost: 1000,
+                    icon: 'fa-calendar-day',
+                    category: 'time',
+                    claimed: false
+                },
+                {
+                    id: 4,
+                    title: 'مشروب مجاني',
+                    description: 'مشروب مجاني من الماكينة',
+                    points_cost: 100,
+                    icon: 'fa-mug-hot',
+                    category: 'food',
+                    claimed: true
+                },
+                {
+                    id: 5,
+                    title: 'ساعة عمل مرنة',
+                    description: 'ساعة عمل مرنة (دخول/خروج متأخر)',
+                    points_cost: 400,
+                    icon: 'fa-clock',
+                    category: 'flexibility',
+                    claimed: false
+                },
+                {
+                    id: 6,
+                    title: 'مكافأة نقدية',
+                    description: 'مكافأة نقدية 100 ج.م',
+                    points_cost: 800,
+                    icon: 'fa-money-bill-wave',
+                    category: 'cash',
+                    claimed: false
+                }
+            ];
+            
+            displayRewards();
+        }
+
+        // Display rewards
+        function displayRewards() {
+            const container = document.getElementById('rewards-store');
+            
+            container.innerHTML = rewards.map(reward => `
+                <div class="reward-card ${reward.claimed ? 'claimed' : ''} bg-white rounded-lg p-4" onclick="${!reward.claimed ? `claimReward(${reward.id})` : ''}">
+                    <div class="text-center mb-3">
+                        <div class="text-4xl ${reward.claimed ? 'text-gray-400' : 'text-purple-600'}">
+                            <i class="fas ${reward.icon}"></i>
+                        </div>
+                        <h3 class="font-bold text-lg mt-2">${reward.title}</h3>
+                        <p class="text-sm text-gray-600">${reward.description}</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xl font-bold ${reward.claimed ? 'text-gray-400' : 'text-indigo-600'}">
+                            ${reward.points_cost} نقطة
+                        </div>
+                        ${reward.claimed ? 
+                            '<span class="text-xs text-gray-500">تم الاستلام</span>' :
+                            userStats.points >= reward.points_cost ?
+                            '<span class="text-xs text-green-600">متاح</span>' :
+                            '<span class="text-xs text-red-600">نقاط غير كافية</span>'
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Action functions
+        function changeLeaderboardPeriod(period) {
+            loadLeaderboard(period);
+        }
+
+        function claimReward(rewardId) {
+            const reward = rewards.find(r => r.id === rewardId);
+            if (reward && userStats.points >= reward.points_cost) {
+                if (confirm(`هل تريد استلام "${reward.title}" مقابل ${reward.points_cost} نقطة؟`)) {
+                    alert(`تم استلام "${reward.title}" بنجاح!`);
+                    userStats.points -= reward.points_cost;
+                    reward.claimed = true;
+                    updateUserStats();
+                    displayRewards();
+                }
+            } else {
+                alert('نقاطك غير كافية لاستلام هذه المكافأة');
+            }
+        }
+
+        function backToApp() {
+            window.location.href = 'mobile_technician_app_updated.html';
+        }
+    </script>
+</body>
+</html>

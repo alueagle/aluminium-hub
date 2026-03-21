@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الاقتراحات الذكية - Aluminium Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="auth.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .suggestion-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        .suggestion-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .high-priority {
+            border-left-color: #ef4444;
+            background: linear-gradient(to right, rgba(239, 68, 68, 0.1), transparent);
+        }
+        .medium-priority {
+            border-left-color: #f59e0b;
+            background: linear-gradient(to right, rgba(245, 158, 11, 0.1), transparent);
+        }
+        .low-priority {
+            border-left-color: #10b981;
+            background: linear-gradient(to right, rgba(16, 185, 129, 0.1), transparent);
+        }
+        .savings-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
+        .match-percentage {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-lightbulb text-yellow-500 text-2xl ml-2"></i>
+                    <h1 class="text-xl font-bold text-gray-800">نظام الاقتراحات الذكية</h1>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <button onclick="refreshSuggestions()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-sync-alt ml-2"></i>
+                        تحديث
+                    </button>
+                    <button onclick="backToDashboard()" class="text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left"></i>
+                        رجوع
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Stats Overview -->
+        <section class="mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="glass-effect rounded-xl p-6 text-center">
+                    <div class="text-3xl font-bold text-green-600" id="total-savings">0</div>
+                    <div class="text-sm text-gray-600">إجمالي التوفير (ج.م)</div>
+                </div>
+                <div class="glass-effect rounded-xl p-6 text-center">
+                    <div class="text-3xl font-bold text-blue-600" id="active-suggestions">0</div>
+                    <div class="text-sm text-gray-600">اقتراحات نشطة</div>
+                </div>
+                <div class="glass-effect rounded-xl p-6 text-center">
+                    <div class="text-3xl font-bold text-orange-600" id="waste-items">0</div>
+                    <div class="text-sm text-gray-600">عناصر فضلات</div>
+                </div>
+                <div class="glass-effect rounded-xl p-6 text-center">
+                    <div class="text-3xl font-bold text-purple-600" id="match-rate">0%</div>
+                    <div class="text-sm text-gray-600">نسبة المطابقة</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Smart Suggestions -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-brain text-indigo-600 ml-2"></i>
+                        الاقتراحات الذكية
+                    </h2>
+                    <div class="flex items-center space-x-2 space-x-reverse">
+                        <span class="text-sm text-gray-600">الفلترة:</span>
+                        <select id="priority-filter" onchange="filterSuggestions()" class="px-3 py-1 border rounded-lg">
+                            <option value="all">الكل</option>
+                            <option value="high">أولوية عالية</option>
+                            <option value="medium">أولوية متوسطة</option>
+                            <option value="low">أولوية منخفضة</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="suggestions-container" class="space-y-4">
+                    <!-- Suggestions will be loaded here -->
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+                        <p class="mt-2">جاري تحليل الفضلات وتوليد الاقتراحات...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Waste Inventory -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-recycle text-green-600 ml-2"></i>
+                    مخزون الفضلات المتاح
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="waste-inventory">
+                    <!-- Waste items will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Analysis -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-chart-line text-purple-600 ml-2"></i>
+                    تحليل الذكاء الاصطناعي
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-lg p-4">
+                        <h3 class="font-semibold mb-3">أنماط الاستخدام</h3>
+                        <canvas id="usage-patterns-chart"></canvas>
+                    </div>
+                    <div class="bg-white rounded-lg p-4">
+                        <h3 class="font-semibold mb-3">كفاءة التوفير</h3>
+                        <canvas id="efficiency-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Global variables
+        let suggestions = [];
+        let wasteInventory = [];
+        const API_BASE = '';
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            requireAuth();
+            loadWasteOptimizationData();
+        });
+
+        // API Functions
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(API_BASE + endpoint, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'حدث خطأ ما');
+                }
+                
+                return result;
+            } catch (error) {
+                console.error('API Error:', error);
+                return null;
+            }
+        }
+
+        // Load waste optimization data
+        async function loadWasteOptimizationData() {
+            // Load suggestions
+            await loadSuggestions();
+            
+            // Load waste inventory
+            await loadWasteInventory();
+            
+            // Load statistics
+            await loadStatistics();
+            
+            // Load charts
+            await loadCharts();
+        }
+
+        // Load smart suggestions
+        async function loadSuggestions() {
+            try {
+                // Mock data for demonstration
+                suggestions = [
+                    {
+                        id: 1,
+                        priority: 'high',
+                        title: 'فضلة مطابقة متاحة',
+                        description: 'يوجد قطعة فضلة طول 2.5م باللون الأبيض تطابق تمامًا متطلبات طلب الشراء الحالي',
+                        waste_item: {
+                            serial: 'WASTE-001',
+                            length: 2500,
+                            color: 'أبيض',
+                            thickness: '1.5mm'
+                        },
+                        original_request: {
+                            length: 2500,
+                            color: 'أبيض',
+                            thickness: '1.5mm'
+                        },
+                        savings: 350,
+                        match_percentage: 100,
+                        status: 'active'
+                    },
+                    {
+                        id: 2,
+                        priority: 'medium',
+                        title: 'استخدام جزئي ممكن',
+                        description: 'يمكن استخدام فضلة طول 3.2م لتغطية 80% من متطلبات الطلب الحالي',
+                        waste_item: {
+                            serial: 'WASTE-002',
+                            length: 3200,
+                            color: 'أبيض',
+                            thickness: '1.5mm'
+                        },
+                        original_request: {
+                            length: 4000,
+                            color: 'أبيض',
+                            thickness: '1.5mm'
+                        },
+                        savings: 280,
+                        match_percentage: 80,
+                        status: 'active'
+                    },
+                    {
+                        id: 3,
+                        priority: 'high',
+                        title: 'فرصة توفير كبيرة',
+                        description: '3 قطع فضلات متاحة يمكن تجميعها لتغطية الطلب بالكامل',
+                        waste_items: [
+                            { serial: 'WASTE-003', length: 1500 },
+                            { serial: 'WASTE-004', length: 2000 },
+                            { serial: 'WASTE-005', length: 500 }
+                        ],
+                        original_request: {
+                            length: 4000,
+                            color: 'أبيض',
+                            thickness: '1.5mm'
+                        },
+                        savings: 520,
+                        match_percentage: 100,
+                        status: 'active'
+                    }
+                ];
+                
+                displaySuggestions();
+                updateStats();
+                
+            } catch (error) {
+                console.error('Error loading suggestions:', error);
+            }
+        }
+
+        // Display suggestions
+        function displaySuggestions() {
+            const container = document.getElementById('suggestions-container');
+            const filter = document.getElementById('priority-filter').value;
+            
+            const filteredSuggestions = filter === 'all' 
+                ? suggestions 
+                : suggestions.filter(s => s.priority === filter);
+            
+            container.innerHTML = filteredSuggestions.map(suggestion => `
+                <div class="suggestion-card ${suggestion.priority}-priority bg-white rounded-lg p-4">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <h3 class="font-bold text-lg">${suggestion.title}</h3>
+                                <span class="savings-badge mr-2">توفير ${suggestion.savings} ج.م</span>
+                                <span class="match-percentage">${suggestion.match_percentage}% مطابقة</span>
+                            </div>
+                            <p class="text-gray-600 mb-3">${suggestion.description}</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                <div class="bg-gray-50 p-3 rounded">
+                                    <div class="text-sm font-semibold text-gray-700">الطلب الأصلي:</div>
+                                    <div class="text-sm">
+                                        الطول: ${suggestion.original_request.length}مم<br>
+                                        اللون: ${suggestion.original_request.color}<br>
+                                        السماكة: ${suggestion.original_request.thickness}
+                                    </div>
+                                </div>
+                                <div class="bg-green-50 p-3 rounded">
+                                    <div class="text-sm font-semibold text-green-700">الفضلة المطابقة:</div>
+                                    <div class="text-sm">
+                                        ${suggestion.waste_item ? `
+                                            الرقم: ${suggestion.waste_item.serial}<br>
+                                            الطول: ${suggestion.waste_item.length}مم<br>
+                                            اللون: ${suggestion.waste_item.color}
+                                        ` : `
+                                            ${suggestion.waste_items ? suggestion.waste_items.length + ' قطع متاحة' : 'N/A'}
+                                        `}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex space-x-2 space-x-reverse">
+                                <button onclick="applySuggestion(${suggestion.id})" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                                    <i class="fas fa-check ml-2"></i>
+                                    تطبيق الاقتراح
+                                </button>
+                                <button onclick="viewDetails(${suggestion.id})" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                    <i class="fas fa-info-circle ml-2"></i>
+                                    التفاصيل
+                                </button>
+                                <button onclick="dismissSuggestion(${suggestion.id})" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                                    <i class="fas fa-times ml-2"></i>
+                                    تجاهل
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load waste inventory
+        async function loadWasteInventory() {
+            try {
+                // Mock data for demonstration
+                wasteInventory = [
+                    {
+                        serial: 'WASTE-001',
+                        length: 2500,
+                        color: 'أبيض',
+                        thickness: '1.5mm',
+                        weight: 3.75,
+                        location: 'رف A-3',
+                        date_added: '2024-01-15',
+                        status: 'available'
+                    },
+                    {
+                        serial: 'WASTE-002',
+                        length: 3200,
+                        color: 'أبيض',
+                        thickness: '1.5mm',
+                        weight: 4.8,
+                        location: 'رف B-1',
+                        date_added: '2024-01-18',
+                        status: 'available'
+                    },
+                    {
+                        serial: 'WASTE-003',
+                        length: 1500,
+                        color: 'أبيض',
+                        thickness: '1.5mm',
+                        weight: 2.25,
+                        location: 'رف C-2',
+                        date_added: '2024-01-20',
+                        status: 'available'
+                    },
+                    {
+                        serial: 'WASTE-004',
+                        length: 2000,
+                        color: 'أبيض',
+                        thickness: '1.5mm',
+                        weight: 3.0,
+                        location: 'رف D-1',
+                        date_added: '2024-01-22',
+                        status: 'available'
+                    },
+                    {
+                        serial: 'WASTE-005',
+                        length: 500,
+                        color: 'أبيض',
+                        thickness: '1.5mm',
+                        weight: 0.75,
+                        location: 'رف E-2',
+                        date_added: '2024-01-25',
+                        status: 'available'
+                    }
+                ];
+                
+                displayWasteInventory();
+                
+            } catch (error) {
+                console.error('Error loading waste inventory:', error);
+            }
+        }
+
+        // Display waste inventory
+        function displayWasteInventory() {
+            const container = document.getElementById('waste-inventory');
+            
+            container.innerHTML = wasteInventory.map(item => `
+                <div class="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-bold text-lg">${item.serial}</span>
+                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                            متاح
+                        </span>
+                    </div>
+                    <div class="text-sm text-gray-600 space-y-1">
+                        <div class="flex justify-between">
+                            <span>الطول:</span>
+                            <span class="font-semibold">${item.length} مم</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>الوزن:</span>
+                            <span class="font-semibold">${item.weight} كجم</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>اللون:</span>
+                            <span class="font-semibold">${item.color}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>الموقع:</span>
+                            <span class="font-semibold">${item.location}</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t">
+                        <button onclick="useWasteItem('${item.serial}')" class="w-full bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-hand-pointer ml-2"></i>
+                            استخدام هذه القطعة
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update statistics
+        function updateStats() {
+            const totalSavings = suggestions.reduce((sum, s) => sum + s.savings, 0);
+            const activeSuggestions = suggestions.filter(s => s.status === 'active').length;
+            const wasteItems = wasteInventory.length;
+            const avgMatchRate = suggestions.reduce((sum, s) => sum + s.match_percentage, 0) / suggestions.length;
+            
+            document.getElementById('total-savings').textContent = totalSavings.toFixed(2);
+            document.getElementById('active-suggestions').textContent = activeSuggestions;
+            document.getElementById('waste-items').textContent = wasteItems;
+            document.getElementById('match-rate').textContent = avgMatchRate.toFixed(1) + '%';
+        }
+
+        // Load charts
+        async function loadCharts() {
+            // Usage Patterns Chart
+            const usageCtx = document.getElementById('usage-patterns-chart').getContext('2d');
+            new Chart(usageCtx, {
+                type: 'line',
+                data: {
+                    labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+                    datasets: [{
+                        label: 'الفضلات المستخدمة',
+                        data: [12, 19, 15, 25, 22, 30],
+                        borderColor: 'rgb(99, 102, 241)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+            
+            // Efficiency Chart
+            const efficiencyCtx = document.getElementById('efficiency-chart').getContext('2d');
+            new Chart(efficiencyCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['مواد جديدة', 'فضلات معاد استخدامها', 'فضلات غير مستخدمة'],
+                    datasets: [{
+                        data: [60, 30, 10],
+                        backgroundColor: [
+                            '#ef4444',
+                            '#10b981',
+                            '#f59e0b'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Action functions
+        function filterSuggestions() {
+            displaySuggestions();
+        }
+
+        function applySuggestion(suggestionId) {
+            const suggestion = suggestions.find(s => s.id === suggestionId);
+            if (suggestion) {
+                alert(`سيتم تطبيق الاقتراح: ${suggestion.title}\nتوفير: ${suggestion.savings} ج.م`);
+                // Here you would make an API call to apply the suggestion
+            }
+        }
+
+        function viewDetails(suggestionId) {
+            const suggestion = suggestions.find(s => s.id === suggestionId);
+            if (suggestion) {
+                alert(`تفاصيل الاقتراح:\n${suggestion.description}\n\nالتوفير: ${suggestion.savings} ج.م\nنسبة المطابقة: ${suggestion.match_percentage}%`);
+            }
+        }
+
+        function dismissSuggestion(suggestionId) {
+            const index = suggestions.findIndex(s => s.id === suggestionId);
+            if (index !== -1) {
+                suggestions[index].status = 'dismissed';
+                displaySuggestions();
+                updateStats();
+            }
+        }
+
+        function useWasteItem(serial) {
+            alert(`سيتم استخدام الفضلة: ${serial}\nسيتم تحديث الطلب الحالي لاستخدام هذه القطعة.`);
+        }
+
+        function refreshSuggestions() {
+            loadWasteOptimizationData();
+        }
+
+        function backToDashboard() {
+            window.location.href = 'admin_dashboard_real.html';
+        }
+    </script>
+</body>
+</html>
