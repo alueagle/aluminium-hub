@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aluminium Hub - لوحة التحكم (حقيقية)</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="auth.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .sidebar {
+            background: linear-gradient(180deg, #4f46e5 0%, #7c3aed 100%);
+            min-height: 100vh;
+        }
+        .nav-item {
+            transition: all 0.3s ease;
+        }
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(-5px);
+        }
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-right: 4px solid white;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+        }
+        .success {
+            background: #d1fae5;
+            color: #059669;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Error/Success Messages -->
+    <div id="error-message" class="error"></div>
+    <div id="success-message" class="success"></div>
+    <div id="loading" class="loading">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+        <p class="mt-2">جاري التحميل...</p>
+    </div>
+
+    <!-- Main Container -->
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside class="sidebar w-64 text-white p-4">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold flex items-center">
+                    <i class="fas fa-industry ml-2"></i>
+                    Aluminium Hub
+                </h2>
+                <p class="text-sm opacity-80 mt-1">لوحة التحكم</p>
+            </div>
+            
+            <nav>
+                <div class="nav-item active p-3 rounded-lg cursor-pointer" onclick="showSection('dashboard')">
+                    <i class="fas fa-tachometer-alt ml-2"></i>
+                    لوحة القيادة
+                </div>
+                <div class="nav-item p-3 rounded-lg cursor-pointer" onclick="showSection('stock')">
+                    <i class="fas fa-boxes ml-2"></i>
+                    المخزون
+                </div>
+                <div class="nav-item p-3 rounded-lg cursor-pointer" onclick="showSection('users')">
+                    <i class="fas fa-users ml-2"></i>
+                    المستخدمون
+                </div>
+                <div class="nav-item p-3 rounded-lg cursor-pointer" onclick="showSection('reports')">
+                    <i class="fas fa-chart-bar ml-2"></i>
+                    التقارير
+                </div>
+                <div class="nav-item p-3 rounded-lg cursor-pointer" onclick="showSection('settings')">
+                    <i class="fas fa-cog ml-2"></i>
+                    الإعدادات
+                </div>
+            </nav>
+            
+            <div class="mt-auto pt-8 border-t border-white/20">
+                <div class="flex items-center p-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center ml-3">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <div id="user-name" class="font-semibold">مدير النظام</div>
+                        <div class="text-sm opacity-80">Admin</div>
+                    </div>
+                </div>
+                <button onclick="logout()" class="w-full mt-3 p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
+                    <i class="fas fa-sign-out-alt ml-2"></i>
+                    تسجيل الخروج
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6">
+            <!-- Header -->
+            <header class="glass-effect rounded-xl p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-2xl font-bold text-gray-800">
+                        <span id="section-title">لوحة القيادة</span>
+                    </h1>
+                    <div class="flex items-center space-x-4">
+                        <button onclick="refreshData()" class="btn-primary text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-sync-alt ml-2"></i>
+                            تحديث
+                        </button>
+                        <span class="text-sm text-gray-600">
+                            آخر تحديث: <span id="last-update">--:--</span>
+                        </span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="content-section">
+                <!-- Statistics Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card">
+                        <i class="fas fa-boxes text-4xl mb-3"></i>
+                        <div class="text-3xl font-bold" id="total-stock">0</div>
+                        <div class="text-sm opacity-80">إجمالي المخزون</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-qrcode text-4xl mb-3"></i>
+                        <div class="text-3xl font-bold" id="total-scans">0</div>
+                        <div class="text-sm opacity-80">عمليات المسح</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-cut text-4xl mb-3"></i>
+                        <div class="text-3xl font-bold" id="total-cuts">0</div>
+                        <div class="text-sm opacity-80">عمليات القطع</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-recycle text-4xl mb-3"></i>
+                        <div class="text-3xl font-bold" id="total-waste">0</div>
+                        <div class="text-sm opacity-80">الفضلات</div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card">
+                        <h3 class="text-lg font-semibold mb-4">نشاط العمليات</h3>
+                        <canvas id="activity-chart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-lg font-semibold mb-4">حالة المخزون</h3>
+                        <canvas id="stock-chart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stock Section -->
+            <section id="stock-section" class="content-section hidden">
+                <div class="card">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-semibold">إدارة المخزون</h3>
+                        <button onclick="showAddStockModal()" class="btn-primary text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-plus ml-2"></i>
+                            إضافة قطعة
+                        </button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-right p-3">الرقم المسلسل</th>
+                                    <th class="text-right p-3">الملف التعريفي</th>
+                                    <th class="text-right p-3">الطول</th>
+                                    <th class="text-right p-3">الوزن</th>
+                                    <th class="text-right p-3">الحالة</th>
+                                    <th class="text-right p-3">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stock-table-body">
+                                <tr>
+                                    <td colspan="6" class="text-center p-4">جاري التحميل...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Users Section -->
+            <section id="users-section" class="content-section hidden">
+                <div class="card">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-semibold">إدارة المستخدمين</h3>
+                        <button onclick="showAddUserModal()" class="btn-primary text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-user-plus ml-2"></i>
+                            إضافة مستخدم
+                        </button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-right p-3">اسم المستخدم</th>
+                                    <th class="text-right p-3">الاسم الكامل</th>
+                                    <th class="text-right p-3">الدور</th>
+                                    <th class="text-right p-3">الحالة</th>
+                                    <th class="text-right p-3">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <tr>
+                                    <td colspan="5" class="text-center p-4">جاري التحميل...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="reports-section" class="content-section hidden">
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-6">التقارير</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="border rounded-lg p-4 cursor-pointer hover:bg-gray-50" onclick="generateReport('daily')">
+                            <i class="fas fa-calendar-day text-2xl text-blue-600 mb-3"></i>
+                            <h4 class="font-semibold">تقرير يومي</h4>
+                            <p class="text-sm text-gray-600">ملخص العمليات اليومية</p>
+                        </div>
+                        <div class="border rounded-lg p-4 cursor-pointer hover:bg-gray-50" onclick="generateReport('weekly')">
+                            <i class="fas fa-calendar-week text-2xl text-green-600 mb-3"></i>
+                            <h4 class="font-semibold">تقرير أسبوعي</h4>
+                            <p class="text-sm text-gray-600">ملخص العمليات الأسبوعية</p>
+                        </div>
+                        <div class="border rounded-lg p-4 cursor-pointer hover:bg-gray-50" onclick="generateReport('monthly')">
+                            <i class="fas fa-calendar text-2xl text-purple-600 mb-3"></i>
+                            <h4 class="font-semibold">تقرير شهري</h4>
+                            <p class="text-sm text-gray-600">ملخص العمليات الشهرية</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings-section" class="content-section hidden">
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-6">الإعدادات</h3>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">اسم الشركة</label>
+                            <input type="text" id="company-name" class="w-full p-2 border rounded-lg" value="Aluminium Hub">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">الوزن لكل متر (كجم)</label>
+                            <input type="number" id="weight-per-meter" class="w-full p-2 border rounded-lg" value="1.5" step="0.1">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">الحد الأدنى للمخزون</label>
+                            <input type="number" id="min-stock" class="w-full p-2 border rounded-lg" value="10">
+                        </div>
+                        
+                        <button onclick="saveSettings()" class="btn-primary text-white px-6 py-2 rounded-lg">
+                            <i class="fas fa-save ml-2"></i>
+                            حفظ الإعدادات
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="add-stock-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">إضافة قطعة جديدة</h3>
+            <form id="add-stock-form">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الرقم المسلسل</label>
+                        <input type="text" name="serial_number" required class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الملف التعريفي</label>
+                        <input type="text" name="profile_code" required class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الطول (مم)</label>
+                        <input type="number" name="length" required class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الوزن لكل متر (كجم)</label>
+                        <input type="number" name="weight_per_meter" required class="w-full p-2 border rounded-lg" step="0.1">
+                    </div>
+                </div>
+                <div class="flex space-x-3 space-x-reverse mt-6">
+                    <button type="submit" class="btn-primary text-white px-4 py-2 rounded-lg">
+                        إضافة
+                    </button>
+                    <button type="button" onclick="closeModal('add-stock-modal')" class="px-4 py-2 border rounded-lg">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="add-user-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">إضافة مستخدم جديد</h3>
+            <form id="add-user-form">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">اسم المستخدم</label>
+                        <input type="text" name="username" required class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الاسم الكامل</label>
+                        <input type="text" name="full_name" required class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الدور</label>
+                        <select name="role" required class="w-full p-2 border rounded-lg">
+                            <option value="technician">فني</option>
+                            <option value="admin">مدير</option>
+                            <option value="supervisor">مشرف</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
+                        <input type="tel" name="phone" class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+                        <input type="email" name="email" class="w-full p-2 border rounded-lg">
+                    </div>
+                </div>
+                <div class="flex space-x-3 space-x-reverse mt-6">
+                    <button type="submit" class="btn-primary text-white px-4 py-2 rounded-lg">
+                        إضافة
+                    </button>
+                    <button type="button" onclick="closeModal('add-user-modal')" class="px-4 py-2 border rounded-lg">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        const API_BASE = '';
+        let currentSection = 'dashboard';
+        let charts = {};
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            requireAuth();
+            updateUserDisplay();
+            loadDashboard();
+        });
+
+        // API Functions
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                showLoading(true);
+                hideMessages();
+                
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(API_BASE + endpoint, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'حدث خطأ ما');
+                }
+                
+                return result;
+            } catch (error) {
+                showError(error.message);
+                throw error;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Section Management
+        function showSection(section) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(s => {
+                s.classList.add('hidden');
+            });
+            
+            // Show selected section
+            document.getElementById(`${section}-section`).classList.remove('hidden');
+            
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.nav-item').classList.add('active');
+            
+            // Update title
+            const titles = {
+                dashboard: 'لوحة القيادة',
+                stock: 'إدارة المخزون',
+                users: 'إدارة المستخدمين',
+                reports: 'التقارير',
+                settings: 'الإعدادات'
+            };
+            document.getElementById('section-title').textContent = titles[section];
+            
+            currentSection = section;
+            
+            // Load section data
+            loadSectionData(section);
+        }
+
+        async function loadSectionData(section) {
+            switch (section) {
+                case 'dashboard':
+                    await loadDashboard();
+                    break;
+                case 'stock':
+                    await loadStock();
+                    break;
+                case 'users':
+                    await loadUsers();
+                    break;
+                case 'reports':
+                    // Reports section doesn't need initial data loading
+                    break;
+                case 'settings':
+                    await loadSettings();
+                    break;
+            }
+        }
+
+        // Dashboard Functions
+        async function loadDashboard() {
+            try {
+                const stats = await apiCall('/api/stats');
+                document.getElementById('total-stock').textContent = stats.total_stock || 0;
+                document.getElementById('total-scans').textContent = stats.total_scans || 0;
+                document.getElementById('total-cuts').textContent = stats.total_cuts || 0;
+                document.getElementById('total-waste').textContent = stats.total_waste || 0;
+                
+                // Update last update time
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString('ar-EG');
+                
+                // Load charts
+                await loadCharts();
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        async function loadCharts() {
+            try {
+                const activityData = await apiCall('/api/activity-chart');
+                const stockData = await apiCall('/api/stock-chart');
+                
+                // Activity Chart
+                const activityCtx = document.getElementById('activity-chart').getContext('2d');
+                if (charts.activity) charts.activity.destroy();
+                charts.activity = new Chart(activityCtx, {
+                    type: 'line',
+                    data: {
+                        labels: activityData.labels || [],
+                        datasets: [{
+                            label: 'العمليات',
+                            data: activityData.data || [],
+                            borderColor: 'rgb(79, 70, 229)',
+                            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+                
+                // Stock Chart
+                const stockCtx = document.getElementById('stock-chart').getContext('2d');
+                if (charts.stock) charts.stock.destroy();
+                charts.stock = new Chart(stockCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: stockData.labels || [],
+                        datasets: [{
+                            data: stockData.data || [],
+                            backgroundColor: [
+                                '#10b981',
+                                '#f59e0b',
+                                '#ef4444'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading charts:', error);
+            }
+        }
+
+        // Stock Functions
+        async function loadStock() {
+            try {
+                const stock = await apiCall('/api/stock');
+                const tbody = document.getElementById('stock-table-body');
+                
+                tbody.innerHTML = stock.map(item => `
+                    <tr class="border-b">
+                        <td class="p-3">${item.serial_number}</td>
+                        <td class="p-3">${item.profile_name || 'N/A'}</td>
+                        <td class="p-3">${item.length || 'N/A'} مم</td>
+                        <td class="p-3">${item.total_weight || 'N/A'} كجم</td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 rounded-full text-xs ${
+                                item.status === 'available' ? 'bg-green-100 text-green-800' :
+                                item.status === 'in_use' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                            }">
+                                ${item.status || 'N/A'}
+                            </span>
+                        </td>
+                        <td class="p-3">
+                            <button onclick="viewStockItem('${item.serial_number}')" class="text-blue-600 hover:text-blue-800 ml-2">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="editStockItem('${item.serial_number}')" class="text-green-600 hover:text-green-800 ml-2">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteStockItem('${item.serial_number}')" class="text-red-600 hover:text-red-800 ml-2">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading stock:', error);
+                document.getElementById('stock-table-body').innerHTML = '<tr><td colspan="6" class="text-center p-4">خطأ في تحميل البيانات</td></tr>';
+            }
+        }
+
+        // Users Functions
+        async function loadUsers() {
+            try {
+                const users = await apiCall('/api/users');
+                const tbody = document.getElementById('users-table-body');
+                
+                tbody.innerHTML = users.map(user => `
+                    <tr class="border-b">
+                        <td class="p-3">${user.username}</td>
+                        <td class="p-3">${user.full_name}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 rounded-full text-xs ${
+                                user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                                user.role === 'supervisor' ? 'bg-blue-100 text-blue-800' :
+                                'bg-green-100 text-green-800'
+                            }">
+                                ${user.role === 'admin' ? 'مدير' :
+                                 user.role === 'supervisor' ? 'مشرف' : 'فني'}
+                            </span>
+                        </td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 rounded-full text-xs ${
+                                user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }">
+                                ${user.is_active ? 'نشط' : 'غير نشط'}
+                            </span>
+                        </td>
+                        <td class="p-3">
+                            <button onclick="editUser('${user.username}')" class="text-blue-600 hover:text-blue-800 ml-2">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="toggleUserStatus('${user.username}')" class="text-yellow-600 hover:text-yellow-800 ml-2">
+                                <i class="fas fa-${user.is_active ? 'ban' : 'check'}"></i>
+                            </button>
+                            <button onclick="deleteUser('${user.username}')" class="text-red-600 hover:text-red-800 ml-2">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('users-table-body').innerHTML = '<tr><td colspan="5" class="text-center p-4">خطأ في تحميل البيانات</td></tr>';
+            }
+        }
+
+        // Settings Functions
+        async function loadSettings() {
+            try {
+                const settings = await apiCall('/api/settings');
+                document.getElementById('company-name').value = settings.company_name || 'Aluminium Hub';
+                document.getElementById('weight-per-meter').value = settings.weight_per_meter || 1.5;
+                document.getElementById('min-stock').value = settings.min_stock || 10;
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        async function saveSettings() {
+            try {
+                const settings = {
+                    company_name: document.getElementById('company-name').value,
+                    weight_per_meter: parseFloat(document.getElementById('weight-per-meter').value),
+                    min_stock: parseInt(document.getElementById('min-stock').value)
+                };
+                
+                await apiCall('/api/settings', 'POST', settings);
+                showSuccess('تم حفظ الإعدادات بنجاح');
+            } catch (error) {
+                console.error('Error saving settings:', error);
+            }
+        }
+
+        // Modal Functions
+        function showAddStockModal() {
+            document.getElementById('add-stock-modal').style.display = 'flex';
+        }
+
+        function showAddUserModal() {
+            document.getElementById('add-user-modal').style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Form Handlers
+        document.getElementById('add-stock-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                serial_number: formData.get('serial_number'),
+                profile_code: formData.get('profile_code'),
+                length: parseFloat(formData.get('length')),
+                weight_per_meter: parseFloat(formData.get('weight_per_meter'))
+            };
+            
+            try {
+                await apiCall('/api/stock', 'POST', data);
+                showSuccess('تم إضافة القطعة بنجاح');
+                closeModal('add-stock-modal');
+                e.target.reset();
+                loadStock();
+            } catch (error) {
+                console.error('Error adding stock:', error);
+            }
+        });
+
+        document.getElementById('add-user-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                username: formData.get('username'),
+                full_name: formData.get('full_name'),
+                role: formData.get('role'),
+                phone: formData.get('phone'),
+                email: formData.get('email')
+            };
+            
+            try {
+                await apiCall('/api/users', 'POST', data);
+                showSuccess('تم إضافة المستخدم بنجاح');
+                closeModal('add-user-modal');
+                e.target.reset();
+                loadUsers();
+            } catch (error) {
+                console.error('Error adding user:', error);
+            }
+        });
+
+        // Utility Functions
+        function refreshData() {
+            loadSectionData(currentSection);
+        }
+
+        function updateUserDisplay() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('user-name').textContent = user.full_name || user.username;
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success-message');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => successDiv.style.display = 'none', 3000);
+        }
+
+        function hideMessages() {
+            document.getElementById('error-message').style.display = 'none';
+            document.getElementById('success-message').style.display = 'none';
+        }
+
+        // Placeholder functions for actions
+        function viewStockItem(serial) {
+            alert(`عرض تفاصيل القطعة: ${serial}`);
+        }
+
+        function editStockItem(serial) {
+            alert(`تعديل القطعة: ${serial}`);
+        }
+
+        function deleteStockItem(serial) {
+            if (confirm(`هل تريد حذف القطعة ${serial}؟`)) {
+                alert(`تم حذف القطعة: ${serial}`);
+            }
+        }
+
+        function editUser(username) {
+            alert(`تعديل المستخدم: ${username}`);
+        }
+
+        function toggleUserStatus(username) {
+            alert(`تبديل حالة المستخدم: ${username}`);
+        }
+
+        function deleteUser(username) {
+            if (confirm(`هل تريد حذف المستخدم ${username}؟`)) {
+                alert(`تم حذف المستخدم: ${username}`);
+            }
+        }
+
+        function generateReport(type) {
+            alert(`توليد تقرير ${type}`);
+        }
+    </script>
+</body>
+</html>
