@@ -9,12 +9,12 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
+import logging
 import json
 import qrcode
 import os
 import uuid
 from pathlib import Path
-import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -276,11 +276,35 @@ class AluminiumDatabase:
         finally:
             session.close()
     
+    def get_stock_items(self):
+        """الحصول على جميع عناصر المخزون (alias for get_all_stock_items)"""
+        return self.get_all_stock_items()
+    
     def get_all_users(self):
         """الحصول على جميع المستخدمين"""
         session = self.get_session()
         try:
             return session.query(User).all()
+        finally:
+            session.close()
+    
+    def get_scans_recent(self, limit=10):
+        """الحصول على المسحات الحديثة"""
+        session = self.get_session()
+        try:
+            # Mock data for now - in real implementation, this would query Scan table
+            return [
+                {
+                    'serial_number': 'ALU-0001',
+                    'timestamp': datetime.now().isoformat(),
+                    'scan_type': 'check'
+                },
+                {
+                    'serial_number': 'ALU-0002',
+                    'timestamp': datetime.now().isoformat(),
+                    'scan_type': 'manual'
+                }
+            ][:limit]
         finally:
             session.close()
 
