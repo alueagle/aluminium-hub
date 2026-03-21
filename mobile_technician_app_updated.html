@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aluminium Hub - تطبيق الصنايعي (محدث)</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="auth.js"></script>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Aluminium Hub">
+    <meta name="application-name" content="Aluminium Hub">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏭</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏭</text></svg>">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        .scanner-frame {
+            border: 3px solid #4f46e5;
+            border-radius: 12px;
+            padding: 20px;
+            background: white;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        .nav-item {
+            transition: all 0.3s ease;
+        }
+        .nav-item:hover {
+            background: #f3f4f6;
+        }
+        .nav-item.active {
+            color: #4f46e5;
+            border-bottom: 3px solid #4f46e5;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+        }
+        .success {
+            background: #d1fae5;
+            color: #059669;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .stock-item {
+            transition: all 0.2s ease;
+        }
+        .stock-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-industry text-indigo-600 text-2xl ml-2"></i>
+                    <h1 class="text-xl font-bold text-gray-800">Aluminium Hub</h1>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <span id="user-display" class="text-sm text-gray-600"></span>
+                    <button onclick="logout()" class="text-red-500 hover:text-red-700">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Error/Success Messages -->
+    <div id="error-message" class="error"></div>
+    <div id="success-message" class="success"></div>
+    <div id="loading" class="loading">
+        <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+        <p class="mt-2">جاري التحميل...</p>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Scanner Section -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">
+                    <i class="fas fa-qrcode text-indigo-600 ml-2"></i>
+                    مسح QR Code
+                </h2>
+                
+                <div class="scanner-container">
+                    <div class="scanner-frame">
+                        <div id="scanner-video" style="display: none;">
+                            <video id="video" width="250" height="250" style="border-radius: 8px;"></video>
+                        </div>
+                        <div id="scanner-placeholder" class="text-center py-8">
+                            <i class="fas fa-qrcode text-6xl text-indigo-200 mb-4"></i>
+                            <p class="text-gray-600 mb-4">اضغط للبدء في المسح</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 text-center">
+                    <button onclick="toggleScanner()" class="btn-primary text-white px-8 py-3 rounded-full font-semibold hover:shadow-lg transition-all duration-300">
+                        <i class="fas fa-camera ml-2"></i>
+                        <span id="scanner-btn-text">بدء المسح</span>
+                    </button>
+                </div>
+
+                <!-- Manual Input -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <p class="text-center text-gray-600 mb-3">أو أدخل الرقم المسلسل يدوياً:</p>
+                    <div class="flex space-x-2 space-x-reverse">
+                        <input type="text" id="manual-serial" placeholder="مثال: ALU-0001" 
+                               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <button onclick="processManualInput()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Stats -->
+        <section class="mb-8">
+            <div class="grid grid-cols-3 gap-4">
+                <div class="stats-card text-center">
+                    <div class="text-3xl font-bold text-blue-600" id="scan-count">0</div>
+                    <div class="text-sm text-gray-600">مسح</div>
+                </div>
+                <div class="stats-card text-center">
+                    <div class="text-3xl font-bold text-orange-600" id="cut-count">0</div>
+                    <div class="text-sm text-gray-600">قطع</div>
+                </div>
+                <div class="stats-card text-center">
+                    <div class="text-3xl font-bold text-green-600" id="waste-count">0</div>
+                    <div class="text-sm text-gray-600">فضلات</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stock Items -->
+        <section class="mb-8">
+            <div class="glass-effect rounded-xl p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800">
+                    <i class="fas fa-boxes text-indigo-600 ml-2"></i>
+                    المخزون المتاحر
+                </h3>
+                <div id="stock-items" class="space-y-3">
+                    <p class="text-gray-500 text-center">جاري التحميل...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Activity -->
+        <section class="mb-20">
+            <div class="glass-effect rounded-xl p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800">
+                    <i class="fas fa-history text-indigo-600 ml-2"></i>
+                    النشاط الحديث
+                </h3>
+                <div id="recent-activity" class="space-y-3">
+                    <p class="text-gray-500 text-center">جاري التحميل...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="grid grid-cols-4">
+            <button onclick="showSection('scanner')" class="nav-item active py-3 text-center">
+                <i class="fas fa-qrcode text-xl"></i>
+                <div class="text-xs mt-1">مسح</div>
+            </button>
+            <button onclick="showSection('stock')" class="nav-item py-3 text-center">
+                <i class="fas fa-boxes text-xl"></i>
+                <div class="text-xs mt-1">مخزون</div>
+            </button>
+            <button onclick="showSection('cut')" class="nav-item py-3 text-center">
+                <i class="fas fa-cut text-xl"></i>
+                <div class="text-xs mt-1">قطع</div>
+            </button>
+            <button onclick="showSection('profile')" class="nav-item py-3 text-center">
+                <i class="fas fa-user text-xl"></i>
+                <div class="text-xs mt-1">حسابي</div>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Modals -->
+    <div id="item-details-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">تفاصيل القطعة</h3>
+            <div id="item-details-content">
+                <!-- Content will be populated dynamically -->
+            </div>
+            <div class="flex space-x-3 space-x-reverse mt-6">
+                <button onclick="performCut()" class="btn-primary text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-cut ml-2"></i>
+                    قطع
+                </button>
+                <button onclick="closeModal('item-details-modal')" class="px-4 py-2 border rounded-lg">
+                    إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cut-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">عملية قطع</h3>
+            <form id="cut-form">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الطول المطلوب (مم):</label>
+                        <input type="number" id="cut-length" required 
+                               class="w-full p-2 border rounded-lg" 
+                               placeholder="أدخل الطول" step="0.1">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
+                        <textarea id="cut-notes" 
+                                  class="w-full p-2 border rounded-lg" 
+                                  rows="3" placeholder="أي ملاحظات حول العملية"></textarea>
+                    </div>
+                </div>
+                <div class="flex space-x-3 space-x-reverse">
+                    <button type="submit" class="btn-primary text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-cut ml-2"></i>
+                        تنفيذ القطع
+                    </button>
+                    <button type="button" onclick="closeModal('cut-modal')" class="px-4 py-2 border rounded-lg">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentUser = null;
+        let isScanning = false;
+        let stream = null;
+        let currentItem = null;
+        const API_BASE = '';
+        let currentSection = 'scanner';
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            requireAuth();
+            updateUserDisplay();
+            loadRecentActivity();
+            loadStats();
+            loadStockItems();
+        });
+
+        // API Functions
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                showLoading(true);
+                hideMessages();
+                
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(API_BASE + endpoint, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'حدث خطأ ما');
+                }
+                
+                return result;
+            } catch (error) {
+                showError(error.message);
+                throw error;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Scanner functions
+        async function toggleScanner() {
+            if (isScanning) {
+                stopScanning();
+            } else {
+                startScanning();
+            }
+        }
+
+        async function startScanning() {
+            try {
+                const video = document.getElementById('video');
+                const placeholder = document.getElementById('scanner-placeholder');
+                
+                // Request camera permission
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                
+                video.srcObject = stream;
+                video.style.display = 'block';
+                placeholder.style.display = 'none';
+                
+                isScanning = true;
+                document.getElementById('scanner-btn-text').textContent = 'إيقاف المسح';
+                
+                // Start QR code scanning simulation
+                simulateQRScanning();
+                
+            } catch (error) {
+                showError('لا يمكن الوصول للكاميرا: ' + error.message);
+            }
+        }
+
+        function stopScanning() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            const video = document.getElementById('video');
+            const placeholder = document.getElementById('scanner-placeholder');
+            
+            video.style.display = 'none';
+            placeholder.style.display = 'block';
+            
+            isScanning = false;
+            document.getElementById('scanner-btn-text').textContent = 'بدء المسح';
+        }
+
+        function simulateQRScanning() {
+            // Simulate QR code detection after 3 seconds
+            setTimeout(() => {
+                if (isScanning) {
+                    // Generate a random serial number from existing stock
+                    const mockQRData = `ALU-${Math.floor(Math.random() * 1000).toString().padStart(4, '0')}`;
+                    processQRCode(mockQRData);
+                    stopScanning();
+                }
+            }, 3000);
+        }
+
+        async function processQRCode(qrData) {
+            try {
+                // Parse QR data
+                const qrInfo = JSON.parse(qrData);
+                const serialNumber = qrInfo.serial_number;
+                
+                // Log the scan
+                await apiCall('/api/scan', 'POST', {
+                    serial_number: serialNumber,
+                    scan_type: 'check'
+                });
+                
+                showSuccess(`تم مسح ${serialNumber} بنجاح!`);
+                loadRecentActivity();
+                loadStats();
+                
+                // Get item details
+                const itemData = await apiCall(`/api/stock/${serialNumber}`);
+                currentItem = itemData;
+                showItemDetails(itemData);
+                
+            } catch (error) {
+                // If JSON parse fails, treat as simple serial number
+                await processManualSerial(qrData);
+            }
+        }
+
+        async function processManualInput() {
+            const serialInput = document.getElementById('manual-serial');
+            const serialNumber = serialInput.value.trim();
+            
+            if (!serialNumber) {
+                showError('رجاء إدخال رقم مسلسل صحيح');
+                return;
+            }
+            
+            await processManualSerial(serialNumber);
+            serialInput.value = '';
+        }
+
+        async function processManualSerial(serialNumber) {
+            try {
+                // Log the scan
+                await apiCall('/api/scan', 'POST', {
+                    serial_number: serialNumber,
+                    scan_type: 'manual'
+                });
+                
+                showSuccess(`تم تسجيل ${serialNumber} بنجاح!`);
+                loadRecentActivity();
+                loadStats();
+                
+                // Get item details
+                const itemData = await apiCall(`/api/stock/${serialNumber}`);
+                currentItem = itemData;
+                showItemDetails(itemData);
+                
+            } catch (error) {
+                showError('فشل في معالجة الرقم المسلسل: ' + error.message);
+            }
+        }
+
+        function showItemDetails(itemData) {
+            const content = document.getElementById('item-details-content');
+            content.innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="font-semibold">الرقم المسلسل:</span>
+                        <span class="text-gray-600">${itemData.serial_number}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold">الملف التعريفي:</span>
+                        <span class="text-gray-600">${itemData.profile_name || 'N/A'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold">الطول:</span>
+                        <span class="text-gray-600">${itemData.length || 'N/A'} مم</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold">الوزن:</span>
+                        <span class="text-gray-600">${itemData.total_weight || 'N/A'} كجم</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold">الحالة:</span>
+                        <span class="px-2 py-1 rounded-full text-xs ${
+                            itemData.status === 'available' ? 'bg-green-100 text-green-800' :
+                            itemData.status === 'in_use' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                        }">
+                            ${itemData.status === 'available' ? 'متاحة' :
+                             itemData.status === 'in_use' ? 'قيد الاستخدام' : 'مستخدمة'}
+                        </span>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('item-details-modal').style.display = 'flex';
+        }
+
+        function performCut() {
+            document.getElementById('item-details-modal').style.display = 'none';
+            document.getElementById('cut-modal').style.display = 'flex';
+        }
+
+        // Cut form handler
+        document.getElementById('cut-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const cutLength = parseFloat(document.getElementById('cut-length').value);
+            const cutNotes = document.getElementById('cut-notes').value;
+            
+            if (!cutLength || cutLength <= 0) {
+                showError('رجاء إدخل طول صحيح');
+                return;
+            }
+            
+            try {
+                await apiCall('/api/cut', 'POST', {
+                    serial_number: currentItem.serial_number,
+                    cut_length: cutLength,
+                    notes: cutNotes
+                });
+                
+                showSuccess('تم تسجيل عملية القطع بنجاح!');
+                closeModal('cut-modal');
+                loadRecentActivity();
+                loadStats();
+                loadStockItems();
+                
+            } catch (error) {
+                showError('فشل في تسجيل القطع: ' + error.message);
+            }
+        });
+
+        // Load functions
+        async function loadRecentActivity() {
+            try {
+                const activity = await apiCall('/api/scans/recent');
+                displayRecentActivity(activity);
+            } catch (error) {
+                document.getElementById('recent-activity').innerHTML = 
+                    '<p class="text-gray-500 text-center">لا يوجد نشاط حتى الآن</p>';
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const stats = await apiCall('/api/stats');
+                document.getElementById('scan-count').textContent = stats.scans || 0;
+                document.getElementById('cut-count').textContent = stats.cuts || 0;
+                document.getElementById('waste-count').textContent = stats.waste || 0;
+            } catch (error) {
+                // Keep default values (0) if API fails
+            }
+        }
+
+        async function loadStockItems() {
+            try {
+                const stock = await apiCall('/api/stock');
+                const container = document.getElementById('stock-items');
+                
+                container.innerHTML = stock.map(item => `
+                    <div class="stock-item bg-white rounded-lg p-4 border border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="font-semibold text-gray-800">${item.serial_number}</div>
+                                <div class="text-sm text-gray-600">${item.profile_name || 'N/A'}</div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-1 rounded-full text-xs ${
+                                    item.status === 'available' ? 'bg-green-100 text-green-800' :
+                                    item.status === 'in_use' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                                }">
+                                    ${item.status === 'available' ? 'متاحة' :
+                                     item.status === 'in_use' ? 'قيد الاستخدام' : 'مستخدمة'}
+                                </span>
+                                <button onclick="showItemDetails(${JSON.stringify(item).replace(/"/g, '&quot;')})" 
+                                        class="text-blue-600 hover:text-blue-800">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-600">
+                            الطول: ${item.length || 'N/A'} مم | الوزن: ${item.total_weight || 'N/A'} كجم
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading stock items:', error);
+                document.getElementById('stock-items').innerHTML = 
+                    '<p class="text-gray-500 text-center">خطأ في تحميل المخزون</p>';
+            }
+        }
+
+        function displayRecentActivity(activities) {
+            const container = document.getElementById('recent-activity');
+            
+            if (!activities || activities.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center">لا يوجد نشاط حتى الآن</p>';
+                return;
+            }
+            
+            container.innerHTML = activities.slice(0, 10).map(activity => `
+                <div class="bg-white rounded-lg p-3 flex items-center">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center ml-3">
+                        <i class="fas fa-qrcode text-blue-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-bold text-sm">مسح QR Code</p>
+                        <p class="text-xs text-gray-600">${activity.serial_number}</p>
+                    </div>
+                    <span class="text-xs text-gray-500">
+                        ${new Date(activity.timestamp).toLocaleTimeString('ar-EG', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // UI Functions
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success-message');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => successDiv.style.display = 'none', 3000);
+        }
+
+        function hideMessages() {
+            document.getElementById('error-message').style.display = 'none';
+            document.getElementById('success-message').style.display = 'none';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function updateUserDisplay() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('user-display').textContent = user.full_name || user.username;
+            }
+        }
+
+        function showSection(section) {
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.nav-item').classList.add('active');
+            
+            currentSection = section;
+            
+            // Reload data
+            loadRecentActivity();
+            loadStats();
+            if (section === 'stock') {
+                loadStockItems();
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
