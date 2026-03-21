@@ -288,16 +288,30 @@ def init_database():
     """تهيئة قاعدة البيانات وإنشاء المستخدمين الافتراضيين"""
     db = AluminiumDatabase()
     
-    # Create default users
+    # Create default users only if they don't exist
     try:
-        db.create_user('admin', 'Administrator', 'admin', '+201234567890', 'admin@aluminium-hub.com')
-        db.create_user('worker1', 'Technician 1', 'technician', '+201234567891', 'worker1@aluminium-hub.com')
-        db.create_user('supervisor', 'Supervisor', 'supervisor', '+201234567892', 'supervisor@aluminium-hub.com')
+        # Check if admin user exists
+        admin_user = db.get_user_by_username('admin')
+        if not admin_user:
+            db.create_user('admin', 'Administrator', 'admin', '+201234567890', 'admin@aluminium-hub.com')
         
-        # Generate initial QR codes
-        result = db.generate_initial_qr_codes(50)
+        # Check if worker1 user exists
+        worker1_user = db.get_user_by_username('worker1')
+        if not worker1_user:
+            db.create_user('worker1', 'Technician 1', 'technician', '+201234567891', 'worker1@aluminium-hub.com')
         
-        logger.info(f"Database initialized with {len(db.get_all_users())} users and {result['created']} QR codes")
+        # Check if supervisor user exists
+        supervisor_user = db.get_user_by_username('supervisor')
+        if not supervisor_user:
+            db.create_user('supervisor', 'Supervisor', 'supervisor', '+201234567892', 'supervisor@aluminium-hub.com')
+        
+        # Generate initial QR codes only if no stock items exist
+        stock_items = db.get_all_stock_items()
+        if len(stock_items) == 0:
+            result = db.generate_initial_qr_codes(50)
+            logger.info(f"Generated {result['created']} QR codes")
+        
+        logger.info(f"Database initialized with {len(db.get_all_users())} users and {len(db.get_all_stock_items())} stock items")
         return db
     except Exception as e:
         logger.error(f"Error initializing database: {e}")
